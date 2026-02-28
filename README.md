@@ -1,17 +1,31 @@
 # Advanced Artificial Intelligence
 Repository for AAI group project.
+|   |   |  
+|---|---|
+|  **Dataset**  | [Fruit and Vegetable Disease (Healthy vs Rotten)](https://www.kaggle.com/datasets/muhammad0subhan/fruit-and-vegetable-disease-healthy-vs-rotten)  | 
+|  **Library** | Pytorch  |  
+| **Model list** | [Pytorch models and leaderboard](https://docs.pytorch.org/vision/stable/models.html) |
 
-Fruit and veg dataset : https://www.kaggle.com/datasets/muhammad0subhan/fruit-and-vegetable-disease-healthy-vs-rotten
+# Models
 
-Pytorch models and leaderboard: https://docs.pytorch.org/vision/stable/models.html
-
-1. **EfficientNetV2** - https://arxiv.org/pdf/2104.00298
-   - One of the top-performing models at a fraction of performance.
-   - Small, medium and large variants.
-2. There are several other model variants with a few more percentage points but their computation is 600% greater (compared to EfficientNetV2 large).
-  - Of these options their are transformer-based vision models. **These are considered considerably worse for XAI**, particularly when presenting rationale heatmaps.
+|  Model | Architecture  |  Notes |   
+|---|---|---|
+|  [**EfficientNetV2**](https://arxiv.org/pdf/2104.00298)|  CNN  | <ul><li>Top-performing models at a fraction of performance.<li>Data effecient</li><li>Better heatmaps than transformers (XAI)</li></ul> |
+|  ViT or Swin | Transformer  | <ul><li>Data hungry but possibly better performance.</li><li>Allegedly poorer XAI</li></ul>|
+| MaxVit_T | Hybrid | -- |
 
 
-<img width="513" height="423" alt="image" src="https://github.com/user-attachments/assets/d6158994-0b29-4598-89f1-d08590d8fcb4" />
 
- Imagenet performance results https://arxiv.org/pdf/2104.00298 
+## Key variants
+
+
+Models variants across the three architectures with comporable _GFLOPS_ were selected.
+- Theree are several pytorch models & variants with a slightly greater performance but computation is many magnitudes higher.
+  
+| Model  | Architecture | ACC | PARAMS | GFLOPS |  Purpose | Notes |
+|---|---|---|---|---|---|---|
+| EfficientNet_V2_S_Weights.IMAGENET1K_V1 |  CNN   | 	84.228 | 	21.5M | 	 **8.37**| Arch comparison | -- |
+| Swin_S_Weights.IMAGENET1K_V1 | Transformer  | 	83.196 | 49.6M | **8.74**| Arch comparison | -- |
+| MaxVit_T  | Hybrid | 83.7 | 30.9M | **5.56**| Arch comparison | Only variant | 
+| EfficientNet_V2_L_Weights.IMAGENET1K_V1 | CNN |  85.808 | 118.5M |**56.08** |Performance | -- |
+
