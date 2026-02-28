@@ -20,7 +20,7 @@ Repository for AAI group project.
 
 
 Models variants across the three architectures with comporable _GFLOPS_ were selected.
-- Theree are several pytorch models & variants with a slightly greater performance but computation is many magnitudes higher.
+- There are several pytorch models & variants with slightly greater performance but computation is many magnitudes higher.
   
 | Model  | Architecture | ACC | PARAMS | GFLOPS |  Purpose | Notes |
 |---|---|---|---|---|---|---|
