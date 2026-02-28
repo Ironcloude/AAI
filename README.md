@@ -1,10 +1,10 @@
 # Advanced Artificial Intelligence
 Repository for AAI group project.
-|   |   |  
-|---|---|
-|  **Dataset**  | [Fruit and Vegetable Disease (Healthy vs Rotten)](https://www.kaggle.com/datasets/muhammad0subhan/fruit-and-vegetable-disease-healthy-vs-rotten)  | 
-|  **Library** | Pytorch  |  
-| **Model list** | [Pytorch models and leaderboard](https://docs.pytorch.org/vision/stable/models.html) |
+|   |   |   | 
+|---|---|---|
+|  **Dataset**  | [Fruit and Vegetable Disease (Healthy vs Rotten)](https://www.kaggle.com/datasets/muhammad0subhan/fruit-and-vegetable-disease-healthy-vs-rotten)  | -- | 
+|  **Library** | Pytorch (Stable 2.10) | [Download](https://pytorch.org/get-started/locally/) |
+| **Model list** | [Pytorch models and leaderboard](https://docs.pytorch.org/vision/stable/models.html) | -- |
 
 # Models
 
