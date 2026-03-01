@@ -48,7 +48,7 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 | Attention heads | --- | Transformer |
 | Transformer layers | --- | Transformer |
 | Patch size | --- | Transformer |
-- Additional can experiment with freezing different layers for transfer learning.
+- Additional can experiment with partial freezing for transfer learning.
 
 ## XAI
 
