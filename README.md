@@ -35,15 +35,20 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 |Loss function| CrossEntropy, WeightedCrossEntropy | --- |
 | Optimizer | AdamW, SGD, RMSprop | --- |
 | Learning rate (LR) | --- | --- |
+| Learning rate schedular | --- | --- |
+| Epcohs | --- | --- |
 | Batch size | --- |  --- |
 | Weight decay | --- | --- |
 | Kernel Size | --- | CNN |
+| Pooling type | --- | CNN |
 | Stride | --- | CNN |
 | Padding | --- | CNN |
 | Filter count | --- | CNN |
 | Hidden size | --- | Transformer |
 | Attention heads | --- | Transformer |
 | Transformer layers | --- | Transformer |
+| Patch size | --- | Transformer |
+- Additional can experiment with freezing different layers for transfer learning.
 
 ## XAI
 
