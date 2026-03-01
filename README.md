@@ -29,7 +29,7 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 | EfficientNet_V2_L_Weights.IMAGENET1K_V1 | CNN |  85.808 | 118.5M |**56.08** |Performance | -- |
 
 
-## Key hyperparamters
+## Key hyperparameters and approaches
 | Parameter | Example | Arch |
 |---|---|---|
 |Loss function| CrossEntropy, WeightedCrossEntropy | --- |
@@ -48,6 +48,7 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 | Attention heads | --- | Transformer |
 | Transformer layers | --- | Transformer |
 | Patch size | --- | Transformer |
+- Transfer learning vs. fine-tuning
 - Additional can experiment with partial freezing for transfer learning.
 
 ## XAI
