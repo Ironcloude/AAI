@@ -1,5 +1,6 @@
 # Advanced Artificial Intelligence
-Repository for AAI group project.
+Repository for the AAI group project.
+## TASK 2: Image Classification
 |   |   |   | 
 |---|---|---|
 |  **Dataset**  | [Fruit and Vegetable Disease (Healthy vs Rotten)](https://www.kaggle.com/datasets/muhammad0subhan/fruit-and-vegetable-disease-healthy-vs-rotten)  | -- | 
@@ -52,5 +53,19 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 - Additional can experiment with partial freezing for transfer learning.
 
 ## XAI
+| Tool | Use |
+|---|---|
+| Grad-cam |  Visual heatmap of crucial image regions; what the "model is looking at". Made for CNNs. Optimal for image classification. |
+| LIME | Local feature importance. Explanations may slightly differ for the same prediction. Lightweight | 
+| SHAP |  Local (one prediction) or global (model-wide) feature importance. Consistent. Expensive for images. |
+<img width="567" height="440" alt="image" src="https://github.com/user-attachments/assets/84639a7d-d421-4fa8-ba9b-054f36d16f53" />
 
 ## Evaluation
+| Metric | Purpose |
+|---|---|
+| Accuracy | --- |
+| Validation Loss | --- |
+| Recall | Evaluate false negatives |
+| F1 | Balance of precision and recall |
+| Confusion Matrix | --- |
+| AUC-ROC (Binary) | Measure of distinguishing difference | 
