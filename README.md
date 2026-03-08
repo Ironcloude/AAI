@@ -1,5 +1,23 @@
 # Advanced Artificial Intelligence
 Repository for the AAI group project.
+
+```bash
+git clone <this_repo>
+cd <this_repo>
+uv venv --python 3.11
+
+# Activate uv
+## MacOS & Linux
+source .venv/bin/activate
+
+## Windows
+.\.venv\Scripts\activate
+
+# Install requirements
+uv python -r requirements.txt
+
+```
+
 ## TASK 2: Image Classification
 |   |   |   | 
 |---|---|---|
