@@ -13,8 +13,8 @@ source .venv/bin/activate
 ## Windows
 .\.venv\Scripts\activate
 
-# Install requirements
-uv python -r requirements.txt
+# Install requirements (UPDATE: IF THIS DOES NOT WORK DUE TO BROKEN DEPENDENCIES, INSTALL MODULES MANUALLY AS REQUIRED)
+uv python -r requirements.txt 
 
 ```
 
