@@ -13,8 +13,10 @@ source .venv/bin/activate
 ## Windows
 .\.venv\Scripts\activate
 
-# Install requirements (UPDATE: IF THIS DOES NOT WORK DUE TO BROKEN DEPENDENCIES, INSTALL MODULES MANUALLY AS REQUIRED)
-uv python -r requirements.txt 
+# Install base requirements 
+uv python -r requirements.txt
+# [Optional] For GPU acceleration (find specific version here: https://pytorch.org/get-started/locally/)
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 
 ```
 
