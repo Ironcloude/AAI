@@ -1,5 +1,28 @@
 # Advanced Artificial Intelligence
 Repository for the AAI group project.
+
+```bash
+git clone <this_repo>
+cd <this_repo>
+uv venv --python 3.11
+
+# Activate uv
+## MacOS & Linux
+source .venv/bin/activate
+
+## Windows
+.\.venv\Scripts\activate
+
+# Install base requirements 
+uv python -r requirements.txt
+# [Optional] For GPU acceleration (find specific version here: https://pytorch.org/get-started/locally/)
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+
+# Display logs with Tensorboard with
+tensorboard --logdir <task>/runs/<log_directory>
+
+```
+
 ## TASK 2: Image Classification
 |   |   |   | 
 |---|---|---|
@@ -7,7 +30,12 @@ Repository for the AAI group project.
 |  **Library** | Pytorch (Stable 2.10) | [Download](https://pytorch.org/get-started/locally/) |
 | **Model list** | [Pytorch models and leaderboard](https://docs.pytorch.org/vision/stable/models.html) | -- |
 
-# Models
+<details>
+<summary>
+  
+## Models
+  
+</summary>
 
 |  Model | Architecture  |  Notes |   
 |---|---|---|
@@ -16,7 +44,6 @@ Repository for the AAI group project.
 | MaxVit_T | Hybrid | -- |
 
 ## Key variants
-
 
 Models variants across the three architectures with comporable _GFLOPS_ were selected.
 - There are several pytorch models & variants with slightly greater performance but computation is many magnitudes higher.
@@ -29,8 +56,14 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 | MaxVit_T  | Hybrid | 83.7 | 30.9M | **5.56**| Arch comparison | Only variant | 
 | EfficientNet_V2_L_Weights.IMAGENET1K_V1 | CNN |  85.808 | 118.5M |**56.08** |Performance | -- |
 
+</details>
+<details>
+<summary>
 
-## Key hyperparameters and approaches
+## Key hyperparameters and variables
+
+</summary>
+
 | Parameter | Example | Arch |
 |---|---|---|
 |Loss function| CrossEntropy, WeightedCrossEntropy | --- |
@@ -52,7 +85,14 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 - Transfer learning vs. fine-tuning
 - Additional can experiment with partial freezing for transfer learning.
 
+</details>
+<details>
+<summary>
+  
 ## XAI
+
+</summary>
+
 | Tool | Use |
 |---|---|
 | Grad-cam |  Visual heatmap of crucial image regions; what the "model is looking at". Made for CNNs. Optimal for image classification. |
@@ -60,7 +100,16 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 | SHAP |  Local (one prediction) or global (model-wide) feature importance. Consistent. Expensive for images. |
 <img width="567" height="440" alt="image" src="https://github.com/user-attachments/assets/84639a7d-d421-4fa8-ba9b-054f36d16f53" />
 
+</details>
+<details>
+<summary>
+  
 ## Evaluation
+
+</summary>
+
+### Quantitative
+
 | Metric | Purpose |
 |---|---|
 | Accuracy | --- |
@@ -69,3 +118,10 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 | F1 | Balance of precision and recall |
 | Confusion Matrix | --- |
 | AUC-ROC (Binary) | Measure of distinguishing difference | 
+
+### Qualitative
+- Effects of finetuning (with, without and different methods)
+- Effect of pretraining (with and without)
+- Comparison of model architectures
+
+</details>
