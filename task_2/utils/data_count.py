@@ -1,6 +1,6 @@
-import os
-
-data_dir = "./data/task_2/Fruit_And_Vegetable_Diseases_Dataset"
+from pathlib import Path
+import os 
+data_dir = Path(__file__).resolve().parent.parent / "data" / "Fruit_And_Vegetable_Diseases_Dataset"
 
 for folder in sorted(os.listdir(data_dir)):
     folder_path = os.path.join(data_dir, folder)
