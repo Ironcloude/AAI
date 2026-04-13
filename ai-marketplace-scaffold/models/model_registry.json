@@ -1,0 +1,33 @@
+{
+  "models": {
+    "tiny-iris-logreg.joblib": {
+      "display_name": "Tiny Iris Logistic Regression",
+      "task_type": "tabular",
+      "format": ".joblib",
+      "path": "/app/models/tiny-iris-logreg.joblib",
+      "runtime_supported": true
+    },
+    "demo-stats-model.pkl": {
+      "display_name": "Demo Stats Model",
+      "task_type": "tabular",
+      "format": ".pkl",
+      "path": "/app/models/demo-stats-model.pkl",
+      "runtime_supported": false
+    },
+    "demo-vision.safetensors": {
+      "display_name": "Demo Vision Model",
+      "task_type": "image",
+      "format": ".safetensors",
+      "path": "/app/models/demo-vision.safetensors",
+      "runtime_supported": false
+    },
+    "demo-llm.gguf": {
+      "display_name": "Demo LLM (GGUF)",
+      "task_type": "image",
+      "format": ".gguf",
+      "path": "/app/models/demo-llm.gguf",
+      "runtime_supported": false
+    }
+  },
+  "active_model_name": "tiny-iris-logreg.joblib"
+}
