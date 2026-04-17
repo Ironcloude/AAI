@@ -1,11 +1,7 @@
 """Segmentation mask generation using SAM 2, rembg, or GrabCut."""
 
 import gc
-import time
-import os
 from pathlib import Path
-import random
-from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 import torch
