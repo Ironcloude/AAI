@@ -41,37 +41,52 @@ class MultiTaskClassifier(nn.Module):
     def _strip_head(base_model: nn.Module) -> tuple[nn.Module, int, float]:
         """Remove the final classification layer from a torchvision model.
 
-        Torchvision models use different attribute names for their
-        classifier:
+        Torchvision models use different attribute names for their classifier:
           - EfficientNet: model.classifier = Sequential(Dropout, Linear)
-          - Swin / MaxVit: TODO — extend when adding new architectures
+          - Swin:         model.head = Linear
+          - MaxViT:       model.classifier = Sequential(..., Linear)
 
         Returns:
-            Tuple of (backbone, in_features) where in_features is the
-            input dimensionality of the removed classifier.
+            Tuple of (backbone, in_features, dropout_prob).
         """
         if hasattr(base_model, "classifier"):
-            # EfficientNet: classifier is Sequential([Dropout, Linear])
-            print("MTL: Original STL classifier:", base_model.classifier)
             head = base_model.classifier
-            in_features = None
-            dropout_prob = 0.0
+
+            # EfficientNet / MaxViT: classifier is Sequential([Dropout, Linear])
             if isinstance(head, nn.Sequential):
-                # Find the Linear layer to get in_features
+                print("MTL: Original STL classifier:", base_model.classifier)
+                in_features = None
+                dropout_prob = 0.0
                 for layer in head:
                     if isinstance(layer, nn.Dropout):
                         dropout_prob = layer.p
                     if isinstance(layer, nn.Linear):
                         in_features = layer.in_features
+                base_model.classifier = nn.Identity()
+                return base_model, in_features, dropout_prob
+
+            # Fallback: plain Linear
             elif isinstance(head, nn.Linear):
+                print("MTL: Original STL classifier:", base_model.classifier)
                 in_features = head.in_features
+                base_model.classifier = nn.Identity()
+                return base_model, in_features, 0.0
+
             else:
                 raise Exception(f"Unexpected classifier structure: {type(head)}")
-            # Overwrite STL classifer with nn.Identity() 
-            # This is essentially a placeholder so forward() returns raw features 
-            # instead of classifying => so new heads can be attached
-            base_model.classifier = nn.Identity()
-            return base_model, in_features, dropout_prob
+
+        elif hasattr(base_model, "head"):
+            # Swin Transformer: model.head is a single Linear layer
+            # e.g. Linear(in_features=768, out_features=1000)
+            print("MTL: Original STL head:", base_model.head)
+            head = base_model.head
+            if isinstance(head, nn.Linear):
+                in_features = head.in_features
+                base_model.head = nn.Identity()
+                return base_model, in_features, 0.0
+            else:
+                raise Exception(f"Unexpected head structure for Swin: {type(head)}")
+
         else:
             raise Exception(
                 f"Unsupported architecture: {type(base_model).__name__}. "
@@ -83,6 +98,12 @@ class MultiTaskClassifier(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Return (health_logits, type_logits) for the given input batch."""
         features = self.backbone(image_batch)
+
+        # MaxViT's backbone returns a 4D tensor (batch, channels, H, W)
+        # We need to flatten it to 2D (batch, features) before the heads
+        if features.dim() == 4:
+            features = features.mean(dim=[2, 3])  # Global average pooling
+
         return self.health_head(features), self.type_head(features)
 
 if __name__ == "__main__":
