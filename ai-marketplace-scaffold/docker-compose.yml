@@ -11,7 +11,7 @@ services:
       MODELS_DIR: /app/models
       MODEL_REGISTRY_PATH: /app/models/model_registry.json
       ACTIVE_MODEL_NAME: tiny-iris-logreg.joblib
-      USE_FILE_MODELS: "false"
+      USE_FILE_MODELS: "true"
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./models:/app/models

@@ -45,7 +45,8 @@ def upload_model():
     model_file.save(destination)
 
     try:
-        metadata = registry.register_model(filename=filename, task_type=task_type, display_name=display_name)
+        metadata = registry.register_model(
+            filename=filename, task_type=task_type, display_name=display_name)
     except ValueError as exc:
         destination.unlink(missing_ok=True)
         return jsonify({"error": str(exc)}), 400
@@ -60,12 +61,18 @@ def select_model():
     if not model_name:
         return jsonify({"error": "Missing 'model_name' in JSON body"}), 400
 
+    print(f"DEBUG: Starting select_model for {model_name}", flush=True)
+    # The hang happens here inside registry.select_model
+    # We will wrap it in a try/except to see if it even finishes
     try:
         result = registry.select_model(model_name)
-    except (KeyError, ValueError, FileNotFoundError) as exc:
+        print(f"DEBUG: registry.select_model finished", flush=True)
+    except Exception as exc:
+        print(f"DEBUG: Exception in select_model: {exc}", flush=True)
         return jsonify({"error": str(exc)}), 400
 
     return jsonify({"message": "Active model updated", **result})
+
 
 
 @app.post("/predict/tabular")
@@ -95,7 +102,14 @@ def predict_image():
         return jsonify({"error": "Uploaded image is empty"}), 400
 
     try:
-        result = analyse_image(image_bytes)
+        model = None
+        if registry.active_model_name:
+            try:
+                model = registry.load_model(registry.active_model_name)
+            except Exception as e:
+                print(f"DEBUG: Could not load active model {registry.active_model_name}: {e}", flush=True)
+        
+        result = analyse_image(image_bytes, model=model)
     except Exception as exc:
         return jsonify({"error": f"Image analysis failed: {exc}"}), 400
 

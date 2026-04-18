@@ -27,7 +27,15 @@
       "format": ".gguf",
       "path": "/app/models/demo-llm.gguf",
       "runtime_supported": false
+    },
+    "EfficientNet_V2_S.pth": {
+      "display_name": "fff",
+      "task_type": "image",
+      "format": ".pth",
+      "path": "/app/models/EfficientNet_V2_S.pth",
+      "runtime_supported": true,
+      "source": "upload"
     }
   },
-  "active_model_name": "tiny-iris-logreg.joblib"
+  "active_model_name": "EfficientNet_V2_S.pth"
 }

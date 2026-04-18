@@ -10,7 +10,8 @@ from bootstrap_model import bootstrap_default_model
 
 
 SUPPORTED_EXECUTABLE_TABULAR_SUFFIXES = {".joblib", ".pkl"}
-SUPPORTED_ACCEPTED_SUFFIXES = {".joblib", ".pkl", ".safetensors", ".gguf"}
+SUPPORTED_EXECUTABLE_IMAGE_SUFFIXES = {".pth"}
+SUPPORTED_ACCEPTED_SUFFIXES = {".joblib", ".pkl", ".safetensors", ".gguf", ".pth"}
 
 
 class DummyTabularModel:
@@ -106,7 +107,8 @@ class ModelRegistry:
         if suffix not in SUPPORTED_ACCEPTED_SUFFIXES:
             raise ValueError(f"Unsupported model suffix: {suffix}")
 
-        runtime_supported = suffix in SUPPORTED_EXECUTABLE_TABULAR_SUFFIXES and task_type == "tabular"
+        runtime_supported = (suffix in SUPPORTED_EXECUTABLE_TABULAR_SUFFIXES and task_type == "tabular") or \
+                            (suffix in SUPPORTED_EXECUTABLE_IMAGE_SUFFIXES and task_type == "image")
         state = self._read_registry()
         state.setdefault("models", {})[filename] = {
             "display_name": display_name or filename,
@@ -120,6 +122,7 @@ class ModelRegistry:
         return state["models"][filename]
 
     def select_model(self, model_name: str) -> Dict[str, Any]:
+        print(f"DEBUG: Registry select_model lock acquired", flush=True)
         with self._lock:
             state = self._read_registry()
             models = state.get("models", {})
@@ -134,7 +137,11 @@ class ModelRegistry:
             self._write_registry(state)
             self.active_model_name = model_name
             self._loaded_models.pop(model_name, None)
+            
+            print(f"DEBUG: Calling load_model({model_name})", flush=True)
             model = self.load_model(model_name)
+            print(f"DEBUG: load_model({model_name}) finished", flush=True)
+            
             return {
                 "active_model_name": model_name,
                 "model_type": type(model).__name__,
@@ -146,31 +153,50 @@ class ModelRegistry:
             self.load_model(self.active_model_name)
 
     def load_model(self, model_name: str):
-        with self._lock:
-            if model_name in self._loaded_models:
-                return self._loaded_models[model_name]
+        # Removed the _lock from here because select_model already holds it
+        # and calling it with a lock might cause a deadlock if the lock is not reentrant
+        # (Though threading.Lock is NOT reentrant, you should use RLock)
+        
+        if model_name in self._loaded_models:
+            return self._loaded_models[model_name]
 
-            state = self._read_registry()
-            model_meta = state.get("models", {}).get(model_name)
-            if not model_meta:
-                raise KeyError(f"Model not found: {model_name}")
+        state = self._read_registry()
+        model_meta = state.get("models", {}).get(model_name)
+        if not model_meta:
+            raise KeyError(f"Model not found: {model_name}")
 
-            # When not using file-backed models, return a dummy model for predictions
-            if not self.use_file_models:
-                model = DummyTabularModel()
-                self._loaded_models[model_name] = model
-                return model
+        # When not using file-backed models, return a dummy model for predictions
+        if not self.use_file_models:
+            model = DummyTabularModel()
+            self._loaded_models[model_name] = model
+            return model
 
-            path = Path(model_meta["path"])
-            suffix = path.suffix.lower()
+        path = Path(model_meta["path"])
+        suffix = path.suffix.lower()
+
+        if model_meta["task_type"] == "tabular":
             if suffix not in SUPPORTED_EXECUTABLE_TABULAR_SUFFIXES:
-                raise ValueError(f"Current runtime cannot execute model format: {suffix}")
+                raise ValueError(f"Current runtime cannot execute tabular model format: {suffix}")
             if not path.exists():
                 raise FileNotFoundError(f"Model file does not exist: {path}")
-
             model = joblib.load(path)
             self._loaded_models[model_name] = model
             return model
+        elif model_meta["task_type"] == "image":
+            if suffix not in SUPPORTED_EXECUTABLE_IMAGE_SUFFIXES:
+                raise ValueError(f"Current runtime cannot execute image model format: {suffix}")
+            if not path.exists():
+                raise FileNotFoundError(f"Model file does not exist: {path}")
+            
+            # Import here to avoid circular/unnecessary imports
+            from image_pipeline import load_model
+            print(f"DEBUG: Calling image_pipeline.load_model", flush=True)
+            model = load_model(use_file=True, path=str(path))
+            print(f"DEBUG: image_pipeline.load_model returned", flush=True)
+            self._loaded_models[model_name] = model
+            return model
+        else:
+            raise ValueError(f"Unsupported task type: {model_meta['task_type']}")
 
     def predict_tabular(self, features):
         if not self.active_model_name:

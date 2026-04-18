@@ -93,8 +93,8 @@
 
         <div class="row" style="gap:12px; align-items:flex-end; flex-wrap: wrap;">
           <div>
-            <label>Upload (formats: .joblib, .pkl, .safetensors, .gguf)</label><br />
-            <input type="file" id="inp-model-file" accept=".joblib,.pkl,.safetensors,.gguf" />
+            <label>Upload (formats: .joblib, .pkl, .safetensors, .gguf, .pth)</label><br />
+            <input type="file" id="inp-model-file" accept=".joblib,.pkl,.safetensors,.gguf,.pth" />
           </div>
           <div>
             <label>Task</label><br />
@@ -178,7 +178,7 @@
   <script>
     const j = (sel) => document.querySelector(sel);
     const fmt = (data) => JSON.stringify(data, null, 2);
-    const TIMEOUT_MS = 20000;
+    const TIMEOUT_MS = 90000;
 
     function setGlobalStatus({ state, code, method, path, reason, extra }) {
       const bar = j('#global-status');

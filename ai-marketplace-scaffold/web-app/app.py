@@ -6,7 +6,7 @@ from flask import Flask, jsonify, request, render_template, Response
 
 app = Flask(__name__)
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:8000")
-TIMEOUT = 30
+TIMEOUT = 120
 
 
 @app.get("/health")
@@ -19,7 +19,6 @@ def health():
 def index():
     """Render single-page UI."""
     return render_template("index.html", ai_service_url=AI_SERVICE_URL)
-
 
 
 def _relay(resp: requests.Response):
@@ -60,21 +59,26 @@ def upload_model():
         "task_type": request.form.get("task_type", "tabular"),
         "display_name": request.form.get("display_name", model_file.filename),
     }
-    response = requests.post(f"{AI_SERVICE_URL}/models/upload", files=files, data=data, timeout=TIMEOUT)
+    response = requests.post(
+        f"{AI_SERVICE_URL}/models/upload", files=files, data=data, timeout=TIMEOUT)
     return _relay(response)
 
 
 @app.post("/models/select")
 def select_model():
-    payload = request.get_json(silent=True) or {}
-    response = requests.post(f"{AI_SERVICE_URL}/models/select", json=payload, timeout=TIMEOUT)
+    payload = request.get_json() or {}
+    print(f"\033[43m\033[30m{payload=}\033[0m")
+    response = requests.post(
+        f"{AI_SERVICE_URL}/models/select", json=payload, timeout=TIMEOUT)
+    print(f"\033[43m\033[30m{response=}\033[0m")
     return _relay(response)
 
 
 @app.post("/predict/tabular")
 def predict_tabular():
     payload = request.get_json(silent=True) or {}
-    response = requests.post(f"{AI_SERVICE_URL}/predict/tabular", json=payload, timeout=TIMEOUT)
+    response = requests.post(
+        f"{AI_SERVICE_URL}/predict/tabular", json=payload, timeout=TIMEOUT)
     return _relay(response)
 
 
@@ -87,13 +91,15 @@ def predict_image():
     files = {
         "image": (image_file.filename, image_file.stream, image_file.mimetype or "application/octet-stream"),
     }
-    response = requests.post(f"{AI_SERVICE_URL}/predict/image", files=files, timeout=TIMEOUT)
+    response = requests.post(
+        f"{AI_SERVICE_URL}/predict/image", files=files, timeout=TIMEOUT)
     return _relay(response)
 
 
 @app.get("/xai/active-model")
 def active_model_xai():
-    response = requests.get(f"{AI_SERVICE_URL}/xai/active-model", timeout=TIMEOUT)
+    response = requests.get(
+        f"{AI_SERVICE_URL}/xai/active-model", timeout=TIMEOUT)
     return _relay(response)
 
 
