@@ -210,3 +210,23 @@ __marimo__/
 Fruit_And_Vegetable_Diseases_Dataset/
 "Fruit And Vegetable Diseases Dataset/"
 fruit-and-vegetable-disease-healthy-vs-rotten.zip
+
+# Model checkpoints
+task_2/models/*.pth
+
+# TensorBoard logs
+task_2/runs/
+
+# Additional datasets (large, not tracked)
+task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_dups/
+task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_dups_no_aug/
+task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_dups_no_aug_no_bg/
+task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical/
+task_2/data/archive.zip
+task_2/data/dirty_hashes.pkl
+golden_dataset/
+Grape/
+
+# Misc
+*.exe
+test_screenshots/
