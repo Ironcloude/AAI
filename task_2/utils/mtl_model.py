@@ -52,7 +52,7 @@ class MultiTaskClassifier(nn.Module):
         """
         if hasattr(base_model, "classifier"):
             # EfficientNet: classifier is Sequential([Dropout, Linear])
-            print("Original STL classifier:", base_model.classifier)
+            print("MTL: Original STL classifier:", base_model.classifier)
             head = base_model.classifier
             in_features = None
             dropout_prob = 0.0
