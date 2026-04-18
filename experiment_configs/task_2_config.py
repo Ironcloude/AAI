@@ -31,4 +31,56 @@ EX3_EFFICIENTNET_FINETUNE_MTL = Experiment(
     mtl=True,
 )
 
+# --- Swin Transformer (swin_s) experiments ---
+# Swin uses a shifted-window attention mechanism instead of convolutions.
+# We use a slightly lower learning rate since Transformers are more sensitive to LR.
+
+# EX-4 - Frozen swin_s baseline (transfer learning only)
+EX4_SWIN_FREEZE = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FREEZE", learning_rate=1e-3),
+    scheduler=Scheduler(),
+)
+
+# EX-5 - Finetuned swin_s
+EX5_SWIN_FINETUNE = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-4),
+    scheduler=Scheduler(),
+)
+
+# EX-6 - MTL finetuned swin_s
+EX6_SWIN_FINETUNE_MTL = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-4),
+    scheduler=Scheduler(),
+    mtl=True,
+)
+
+# --- MaxViT Hybrid (maxvit_t) experiments ---
+# MaxViT combines local convolution blocks with global attention - a hybrid approach.
+# Uses same conservative LR as Swin due to attention components.
+
+# EX-7 - Frozen maxvit_t baseline (transfer learning only)
+EX7_MAXVIT_FREEZE = Experiment(
+    architecture="maxvit_t",
+    training=Training(transfer_type="FREEZE", learning_rate=1e-3),
+    scheduler=Scheduler(),
+)
+
+# EX-8 - Finetuned maxvit_t
+EX8_MAXVIT_FINETUNE = Experiment(
+    architecture="maxvit_t",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-4),
+    scheduler=Scheduler(),
+)
+
+# EX-9 - MTL finetuned maxvit_t
+EX9_MAXVIT_FINETUNE_MTL = Experiment(
+    architecture="maxvit_t",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-4),
+    scheduler=Scheduler(),
+    mtl=True,
+)
+
 assign_display_names(sys.modules[__name__])
