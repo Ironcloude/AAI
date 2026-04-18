@@ -1,0 +1,4 @@
+2026-04-18:
+- Resolved deadlock in model_registry.py caused by concurrent non-reentrant lock acquisition between select_model and load_model, causing activation hangs.
+- Fixed bug in app.py where image inference failed to pass the active model to image_pipeline, resulting in fallback to heuristics.
+- Updated image_pipeline.py to compute and return ripeness metrics directly from ML model confidence predictions.
