@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Service Console</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee; --ok:#10b981; --err:#ef4444; --btn:#1f2937; --btn-hover:#374151; --border:#334155; --chip:#0b1220; --title:#e0e7ff; --subtitle:#a5b4fc; }
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji";background:var(--bg);color:var(--text)}
+    header{padding:16px 20px;background:#0b1220;border-bottom:1px solid var(--border)}
+    header h1{margin:0;font-size:18px;letter-spacing:.3px}
+    header small{color:var(--muted)}
+    .statusbar{margin-top:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#0b1220}
+    .statusbar .label{color:var(--muted)}
+    .statusbar.ok{border-color:var(--ok)}
+    .statusbar.err{border-color:var(--err)}
+    .statusbar .code{font-weight:600;color:#fef08a}
+    .statusbar .reason{color:#fca5a5}
+    main{max-width:1000px;margin:0 auto;padding:20px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+    .card h2{margin:4px 0 6px;font-size:16px;color:var(--accent);display:flex;gap:8px;align-items:center}
+    .subhead{margin:8px 0 6px;font-size:18px;color:var(--subtitle)}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    label{color:var(--muted);font-size:12px}
+    input[type="text"],input[type="file"],select{background:#0b1220;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px}
+    input[type="file"]{padding:6px}
+    button{appearance:none;border:1px solid var(--border);background:var(--btn);color:var(--text);border-radius:8px;padding:8px 12px;cursor:pointer}
+    button:hover{background:var(--btn-hover)}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .muted{color:var(--muted);font-size:12px}
+    pre{background:#0b1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;padding:10px;overflow:auto;max-height:280px}
+    .hint{font-size:11px;color:var(--muted)}
+    .endpoints{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
+    .chip{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:11px;color:var(--muted)}
+    .chip.model{color:#fbbf24;border-color:#6b7280}.chip.meta{color:#a7f3d0;border-color:#374151}
+    .info{background:var(--panel);border:1px dashed var(--border);border-radius:8px;padding:10px;margin:14px 0}
+    code{color:#bae6fd}
+    .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;background:#64748b}
+    .dot.ok{background:var(--ok)}.dot.err{background:var(--err)}
+    .subsep{height:1px;background:var(--border);opacity:.6;margin:12px 0}
+    .resp-label{color:var(--muted);font-size:12px;margin:8px 0 4px;display:block}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI Service Console <small>via web-app proxy</small></h1>
+    <div class="muted">AI base: <code id="ai-base">{{ ai_service_url }}</code></div>
+    <div id="global-status" class="statusbar"><span class="label">Status:</span> <span class="message">Idle — nothing running.</span></div>
+  </header>
+  <main>
+    <div class="info">
+      <div><strong>Models directory</strong>: host <code>./models</code> → container <code>/app/models</code></div>
+      <div><strong>Registry file</strong>: <code>./models/model_registry.json</code></div>
+      <div class="hint">Paths inside the AI container must use <code>/app/models/&lt;file&gt;</code>. Only <code>.joblib</code>/<code>.pkl</code> with task <code>tabular</code> execute in this demo.</div>
+    </div>
+
+    <div class="grid">
+      <!-- Combined: Service health + Models -->
+      <section class="card" id="sec-service-models">
+        <h2>Service & Models <span class="chip meta">metadata</span></h2>
+        <div class="endpoints">
+          <div>Web: <code>GET /ai/health</code>, <code>GET /models</code>, <code>POST /models/upload</code>, <code>POST /models/select</code></div>
+          <div>AI: <code>GET /health</code>, <code>GET /models</code>, <code>POST /models/upload</code>, <code>POST /models/select</code></div>
+        </div>
+
+        <div class="row" style="gap:12px; align-items: center;">
+          <div class="row" style="gap:6px; align-items:center;">
+            <span id="dot-health" class="dot"></span>
+            <span class="muted">Health</span>
+          </div>
+          <div class="row" style="gap:6px; align-items:center;">
+            <span class="muted">Active</span>
+            <strong id="active-model-name">—</strong>
+          </div>
+          <div style="margin-left:auto"></div>
+          <button id="btn-sync">Sync</button>
+        </div>
+
+        <div class="row" style="gap:12px; align-items:flex-start; flex-wrap: wrap; margin-top:8px;">
+          <div style="flex:1; min-width:280px;">
+            <label class="resp-label">/ai/health response</label>
+            <pre id="out-ai-health"></pre>
+          </div>
+          <div style="flex:1; min-width:280px;">
+            <label class="resp-label">/models response</label>
+            <pre id="out-models"></pre>
+          </div>
+        </div>
+
+        <hr style="border:0;border-top:1px solid var(--border); margin: 12px 0" />
+
+        <div class="row" style="gap:12px; align-items:flex-end; flex-wrap: wrap;">
+          <div>
+            <label>Upload (formats: .joblib, .pkl, .safetensors, .gguf, .pth)</label><br />
+            <input type="file" id="inp-model-file" accept=".joblib,.pkl,.safetensors,.gguf,.pth" />
+          </div>
+          <div>
+            <label>Task</label><br />
+            <select id="inp-task-type">
+              <option value="tabular" selected>tabular</option>
+              <option value="image">image</option>
+            </select>
+          </div>
+          <div>
+            <label>Name</label><br />
+            <input type="text" id="inp-display-name" placeholder="optional" />
+          </div>
+          <button id="btn-upload-model">Upload</button>
+        </div>
+        <div class="hint">Uploads go to shared <code>/app/models</code>. Non-executable formats will register as metadata only.</div>
+
+        <div class="row" style="gap:12px; margin-top:12px; align-items:flex-end; flex-wrap: wrap;">
+          <div>
+            <label>Activate (executable only)</label><br />
+            <select id="sel-models" style="min-width: 260px"></select>
+          </div>
+          <button id="btn-activate-model">Activate</button>
+        </div>
+        <label class="resp-label">/models/select response</label>
+        <pre id="out-activate"></pre>
+      </section>
+
+      <!-- Combined: Model operations (XAI + Tabular + Image) -->
+      <section class="card" id="sec-model-ops">
+        <h2>Model operations <span class="chip model">uses model</span></h2>
+        <div class="endpoints">
+          <div><code>GET /xai/active-model</code> · <code>POST /predict/tabular</code> · <code>POST /predict/image</code></div>
+        </div>
+
+        <!-- XAI sub-block (on top) -->
+        <div>
+          <h3 class="subhead">XAI</h3>
+          <div class="row">
+            <div style="margin-left:auto"></div>
+            <button id="btn-xai-active">Get</button>
+          </div>
+          <label class="resp-label">/xai/active-model response</label>
+          <pre id="out-xai"></pre>
+        </div>
+
+        <div class="subsep"></div>
+
+        <!-- Tabular sub-block -->
+        <div>
+          <h3 class="subhead">Tabular</h3>
+          <div class="row">
+            <label for="inp-tabular" class="muted">Comma-separated numbers</label>
+          </div>
+          <div class="row">
+            <input type="text" id="inp-tabular" placeholder="e.g. 5.1,3.5,1.4,0.2" style="flex:1" />
+            <button id="btn-predict-tabular">Predict</button>
+          </div>
+          <label class="resp-label">/predict/tabular response</label>
+          <pre id="out-tabular"></pre>
+        </div>
+
+        <div class="subsep"></div>
+
+        <!-- Image sub-block -->
+        <div>
+          <h3 class="subhead">Image</h3>
+          <div class="row">
+            <label for="inp-image" class="muted">Upload file</label>
+          </div>
+          <div class="row">
+            <input type="file" id="inp-image" accept="image/*" />
+            <button id="btn-predict-image">Predict</button>
+          </div>
+          <label class="resp-label">/predict/image response</label>
+          <pre id="out-image"></pre>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const j = (sel) => document.querySelector(sel);
+    const fmt = (data) => JSON.stringify(data, null, 2);
+    const TIMEOUT_MS = 90000;
+
+    function setGlobalStatus({ state, code, method, path, reason, extra }) {
+      const bar = j('#global-status');
+      const msg = j('#global-status .message');
+      bar.classList.remove('ok','err');
+      if (state === 'working') {
+        msg.textContent = extra || 'Working…';
+      } else if (state === 'ok') {
+        bar.classList.add('ok');
+        msg.innerHTML = `OK <span class="code">${code}</span> ${method || ''} ${path || ''}`.trim();
+      } else if (state === 'error') {
+        bar.classList.add('err');
+        const why = reason ? ` — ${reason}` : '';
+        msg.innerHTML = `Failed <span class="code">${code ?? ''}</span> ${method || ''} ${path || ''}${why}`.trim();
+      } else {
+        msg.textContent = 'Idle — nothing running.';
+      }
+    }
+
+    const setBusy = (btn, on) => {
+      if (!btn) return;
+      if (on) { btn.dataset._label = btn.textContent; btn.disabled = true; btn.textContent = 'Processing…'; }
+      else { btn.disabled = false; if (btn.dataset._label) btn.textContent = btn.dataset._label; delete btn.dataset._label; }
+    };
+
+    function extractReason(res, data, url) {
+      try {
+        if (data && typeof data === 'object') {
+          if (data.error) return String(data.error);
+          if (data.message) return String(data.message);
+        }
+        if (typeof data === 'string' && data.trim()) return data.slice(0, 200);
+      } catch (_) {}
+      const m = String(url || '').split('/').slice(0, 4).join('/');
+      return `Request to ${m || 'server'} failed`;
+    }
+
+    function withTimeout(promise, ms) {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort('timeout'), ms);
+      return {
+        run: (init) => promise(init, ctrl.signal).finally(() => clearTimeout(t)),
+        signal: ctrl.signal,
+      };
+    }
+
+    async function requestJson(method, url, body, outEl, busyEl, label) {
+      const path = url;
+      setBusy(busyEl, true);
+      setGlobalStatus({ state: 'working', extra: `Working… ${method} ${label || path}` });
+      let status = 0; let data;
+      try {
+        const runner = withTimeout(async (init, signal) => {
+          const headers = {};
+          const opts = { method, headers, signal };
+          if (body && !(body instanceof FormData)) { headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+          else if (body instanceof FormData) { opts.body = body; }
+          const res = await fetch(url, opts);
+          status = res.status;
+          const ct = res.headers.get('content-type') || '';
+          data = ct.includes('application/json') ? await res.json() : await res.text();
+          if (status >= 200 && status < 300) {
+            setGlobalStatus({ state: 'ok', code: status, method, path: label || path });
+          } else {
+            const reason = extractReason(res, data, url);
+            setGlobalStatus({ state: 'error', code: status, method, path: label || path, reason });
+          }
+          if (outEl) outEl.textContent = typeof data === 'string' ? data : fmt(data);
+          return { status, data };
+        }, TIMEOUT_MS);
+        return await runner.run();
+      } catch (err) {
+        const reason = (err && (err.name === 'AbortError' || err === 'timeout')) ? `Timed out after ${Math.floor(TIMEOUT_MS/1000)}s` : `Network error: ${String(err)}`;
+        setGlobalStatus({ state: 'error', code: status || 0, method, path: label || path, reason });
+        const payload = { error: reason };
+        if (outEl) outEl.textContent = fmt(payload);
+        return { status: 0, data: payload };
+      } finally {
+        setBusy(busyEl, false);
+      }
+    }
+
+    function populateModelsDropdown(modelsPayload) {
+      try {
+        const sel = j('#sel-models'); sel.innerHTML = '';
+        const models = modelsPayload?.models || {}; const active = modelsPayload?.active_model_name;
+        const entries = Object.entries(models).filter(([, meta]) => meta?.runtime_supported);
+        for (const [name, meta] of entries) {
+          const opt = document.createElement('option'); opt.value = name; opt.textContent = meta?.display_name ? `${meta.display_name} (${name})` : name; if (name === active) opt.selected = true; sel.appendChild(opt);
+        }
+        if (sel.options.length === 0) { const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'No executable models available'; sel.appendChild(opt); }
+        j('#active-model-name').textContent = active || '—';
+      } catch (_) {}
+    }
+
+    async function syncServiceAndModels(ev) {
+      const dot = j('#dot-health'); dot.classList.remove('ok','err');
+      const btn = ev && ev.currentTarget ? ev.currentTarget : null;
+      setGlobalStatus({ state: 'working', extra: 'Working… Sync service + models' });
+      const [h, m] = await Promise.all([
+        requestJson('GET', '/ai/health', null, j('#out-ai-health'), btn, '/ai/health'),
+        requestJson('GET', '/models', null, j('#out-models'), null, '/models'),
+      ]);
+      if (h.status >= 200 && h.status < 300) { dot.classList.add('ok'); } else { dot.classList.add('err'); }
+      try {
+        const payload = typeof m.data === 'string' ? JSON.parse(m.data) : m.data;
+        const count = Object.keys(payload?.models || {}).length;
+        if (m.status >= 500) {
+          j('#out-models').textContent = fmt({ note: 'Models registry unavailable (server error). Upload to initialize or check logs.', details: m.data });
+        } else if (count === 0) {
+          j('#out-models').textContent = fmt({ note: 'No models in /app/models (host ./models). Use Upload to add one.' });
+        }
+        populateModelsDropdown(payload);
+      } catch (_) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      j('#btn-sync').addEventListener('click', (e) => syncServiceAndModels(e));
+
+      j('#btn-upload-model').addEventListener('click', async (e) => {
+        const file = j('#inp-model-file').files[0]; const task = j('#inp-task-type').value || 'tabular'; const display = j('#inp-display-name').value || '';
+        const fd = new FormData(); if (file) fd.append('model', file); fd.append('task_type', task); if (display) fd.append('display_name', display);
+        await requestJson('POST', '/models/upload', fd, j('#out-models'), e.currentTarget, '/models/upload');
+        syncServiceAndModels();
+      });
+
+      j('#btn-activate-model').addEventListener('click', async (e) => {
+        const name = j('#sel-models').value; if (!name) { setGlobalStatus({ state:'error', method:'POST', path:'/models/select', reason:'Choose a model' }); return; }
+        await requestJson('POST', '/models/select', { model_name: name }, j('#out-activate'), e.currentTarget, '/models/select');
+        syncServiceAndModels();
+      });
+
+      j('#btn-predict-tabular').addEventListener('click', async (e) => {
+        const raw = j('#inp-tabular').value || ''; const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+        if (parts.length === 0) { setGlobalStatus({ state:'error', method:'POST', path:'/predict/tabular', reason:'Enter comma-separated numbers' }); return; }
+        const nums = parts.map(Number); if (nums.some(n => Number.isNaN(n))) { setGlobalStatus({ state:'error', method:'POST', path:'/predict/tabular', reason:'All values must be numeric' }); return; }
+        await requestJson('POST', '/predict/tabular', { features: nums }, j('#out-tabular'), e.currentTarget, '/predict/tabular');
+      });
+
+      j('#btn-predict-image').addEventListener('click', async (e) => {
+        const file = j('#inp-image').files[0]; if (!file) { setGlobalStatus({ state:'error', method:'POST', path:'/predict/image', reason:'Choose an image file' }); return; }
+        const fd = new FormData(); fd.append('image', file);
+        await requestJson('POST', '/predict/image', fd, j('#out-image'), e.currentTarget, '/predict/image');
+      });
+
+      j('#btn-xai-active').addEventListener('click', (e) => requestJson('GET', '/xai/active-model', null, j('#out-xai'), e.currentTarget, '/xai/active-model'));
+
+      syncServiceAndModels();
+    });
+  </script>
+</body>
+</html>
+
