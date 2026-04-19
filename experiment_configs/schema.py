@@ -27,9 +27,13 @@ class Experiment:
     architecture: str
     training: Training
     scheduler: Scheduler
-    mtl: bool = False
-    mtl_primary_weight: float = 0.8
+    primary_task_weight: float = 1.0
     display_name: str = field(init=False, default="")
+    @property
+    def is_mtl(self) -> bool:
+        """True iff type head receives non-zero loss weighting."""
+        return self.primary_task_weight < 1.0
+
     @property
     def weight_string(self) -> str:
         try: 

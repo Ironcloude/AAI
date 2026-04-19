@@ -28,7 +28,7 @@ EX3_EFFICIENTNET_FINETUNE_MTL = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
     scheduler=Scheduler(),
-    mtl=True,
+    primary_task_weight=0.8,
 )
 
 assign_display_names(sys.modules[__name__])
