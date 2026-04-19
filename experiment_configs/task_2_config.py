@@ -3,43 +3,32 @@ Define experiments configurations.
 
 Dataclasses used for intellisense.
 """
-from dataclasses import dataclass
-
-@dataclass
-class Scheduler:
-    type: str = "StepLR"
-    step_size: int = 5
-    gamma: float = 0.1
-
-@dataclass
-class Training:
-    transfer_type: str = "FREEZE"
-    learning_rate: float = 1e-3
-    momentum: float = 0.9
-    batch_size: int = 32
-    max_epochs: int = 10
-
-@dataclass
-class Experiment:
-    architecture: str
-    weights: str
-    training: Training
-    scheduler: Scheduler
+import sys
+sys.path.append(".")
+from .schema import Experiment, Scheduler, Training, assign_display_names
 
 # EXPERIMENTS
 
 # EX-1 - Frozen efficientnet_v2_s baseline
-efficientnet_freeze_baseline = Experiment(
+EX1_EFFICIENTNET_FREEZE = Experiment(
     architecture="efficientnet_v2_s",
-    weights="EfficientNet_V2_S_Weights.IMAGENET1K_V1",
     training=Training(),
     scheduler=Scheduler(),
 )
 
-# EX-2 - Finetuend efficientnet_v2_s baseline
-efficientnet_finetune_baseline = Experiment(
+# EX-2 - Finetuned efficientnet_v2_s baseline
+EX2_EFFICIENTNET_FINETUNE = Experiment(
     architecture="efficientnet_v2_s",
-    weights="EfficientNet_V2_S_Weights.IMAGENET1K_V1",
-    training=Training(transfer_type="FINETUNE", learning_rate=1e-4),
+    training=Training(transfer_type="FINETUNE"),
     scheduler=Scheduler(),
 )
+
+# EX-3 - MTL finetuned efficientnet_v2_s
+EX3_EFFICIENTNET_FINETUNE_MTL = Experiment(
+    architecture="efficientnet_v2_s",
+    training=Training(transfer_type="FINETUNE"),
+    scheduler=Scheduler(),
+    mtl=True,
+)
+
+assign_display_names(sys.modules[__name__])

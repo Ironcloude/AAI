@@ -210,3 +210,9 @@ __marimo__/
 Fruit_And_Vegetable_Diseases_Dataset/
 "Fruit And Vegetable Diseases Dataset/"
 fruit-and-vegetable-disease-healthy-vs-rotten.zip
+
+task_2/data/sam2_large_masks
+task_2/runs/*
+
+# ignore image dataset
+**/rembg_masks/**/*.png
