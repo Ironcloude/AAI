@@ -214,3 +214,4 @@ fruit-and-vegetable-disease-healthy-vs-rotten.zip
 task_2/data/sam2_large_masks
 task_2/runs/*
 wandb/
+task_2/data/rembg_masks
