@@ -1,0 +1,333 @@
+"""Colour reference building and visualisation for produce grading."""
+from pathlib import Path
+import pickle
+import sys
+import cv2
+from matplotlib import pyplot as plt
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+sys.path.append(".")
+from generate_masks import generate_produce_mask
+from grade_produce import compute_colour_components
+
+
+def build_colour_references(dataset_root: str | Path, mask_root: str | Path = None,
+                            example: bool = False, 
+                            save_paths: list[str] = ["colour_reference.pkl",
+                                                     "generic_colour_distribution.pkl"]
+                            ) -> dict:
+    """Build per-fruit-type reference HSV histograms and colour disitributions
+    from healthy training images.
+
+    The histograms serve as a baseline reference for colour scoring of known fruit
+    at inference time.
+
+    The colour distribution reference serves in normalising similarity scores;
+    raw metrics skew towards a lower baseline.
+
+    Args:
+        dataset_root: Path to produce dataset directory.
+        mask_root: Path to produce mask directory.
+        example: Single directory mode for testing.
+        save_path: Output path for reference and distrubtion pickle files.
+
+    Returns:
+        Dictionary of reference histograms and hsv distribution.
+    """
+
+    references = {}
+    dataset_root = Path(dataset_root)
+    mask_root = Path(mask_root) if mask_root else None
+
+    if example:
+        healthy_directories = [dataset_root]
+    else:
+        healthy_directories = [
+            directory for directory in dataset_root.iterdir()
+            if directory.is_dir() and "healthy" in directory.name.lower()
+    ]
+    produce_classes = {}
+    # For each healthy produce image, find its corresponding mask
+    for produce_directory in healthy_directories:
+        cls_vibrancy, cls_brightness, cls_uniformity = [], [], []
+        fruit_type = produce_directory.name.split("__")[0].strip().lower()
+        histograms = []
+        drop_count = 0
+        # For each produce
+        for image_path in produce_directory.iterdir():
+            if image_path.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
+                continue
+            
+            # Read into np array BGR order
+            # Convert BGR (Blue:Green:Red) to HSV (Hue:Saturation:Value)
+            produce_image = cv2.imread(str(image_path))
+            if produce_image is None:
+                continue
+            hsv_produce_image = cv2.cvtColor(produce_image, cv2.COLOR_BGR2HSV)
+
+            # Load pre-computed mask if available, otherwise fallback to rembg
+            mask = None
+            if mask_root:
+                mask_path = mask_root / produce_directory.name / \
+                            (image_path.stem + ".png")
+                if mask_path.exists():
+                    # Loads as (H, W), values 0 - 255 
+                    # (background [0] or foreground [255])
+                    mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+                    # Convert to 0/1 for calcHist. 
+                    # Anything >127 is foreground; <=127 is background
+                    # mask                          [0, 255, 0, 128]
+                    # mask > 127                    [False, True, False, True]
+                    # (mask > 127).astype(np.uint8) [0, 1, 0,  1]
+                    mask = (mask > 127).astype(np.uint8)
+                    # Ensure mask matches image dimensions
+                    h, w = produce_image.shape[:2]
+                    if mask.shape != (h, w):
+                        mask = cv2.resize(mask, (w, h), 
+                                          interpolation=cv2.INTER_NEAREST)
+            if mask is None:
+                mask = generate_produce_mask(data_path=str(image_path), 
+                                             method="rembg")
+
+            # Calculate frequency distribution of pixel values
+            # More bins; more precision.
+            hist = cv2.calcHist(
+                images=[hsv_produce_image], 
+                channels=[0, 1],        # Channels for hue and saturation
+                mask=mask, 
+                histSize=[30, 32],      # bin counts (hue, saturation). 
+                ranges=[0, 180, 0, 256] # 0-180 (hue); 0-256 (saturation)
+            )
+            # Scale histogram to 1 (larger images don't dominate; proportional)
+            cv2.normalize(hist, hist)
+
+            # Skip if dominant colour (max loc) is very low saturation 
+            # Likely faulty mask isolating background
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(hist) 
+            # remove saturation bin < 5 out of 32 == 16% of lower end
+            if max_loc[0] < 5: 
+                drop_count += 1
+                continue
+            
+            fruit_pixels = hsv_produce_image[mask == 1]
+            vibrancy, brightness, uniformity = compute_colour_components(fruit_pixels)
+            cls_vibrancy.append(vibrancy)
+            cls_brightness.append(brightness)
+            cls_uniformity.append(uniformity)
+
+            histograms.append(hist)
+            
+        print(f"{produce_directory.name}: {len(cls_vibrancy)} samples, {drop_count} dropped")
+        
+        if histograms:
+            stacked = np.array(histograms) # stack all histograms for mean/media ops
+            references[fruit_type] = {
+                "mean": np.mean(stacked, axis=0).astype(np.float32),
+                "median": np.median(stacked, axis=0).astype(np.float32),
+            }   
+
+        produce_classes[fruit_type] = {"vibrancy": cls_vibrancy, "brightness": cls_brightness, "uniformity": cls_uniformity}
+
+    # Ensure class weighting for distribution (otherwise banana's would dominate, etc.)
+    rng = np.random.default_rng(seed=42)
+    min_count = min(len(cls["vibrancy"]) for cls in produce_classes.values())
+    vibrancies, brightnesses, uniformities = [], [], []
+    for components in produce_classes.values():
+        index = rng.choice(len(components["vibrancy"]), size=min_count, replace=False)
+        vibrancies.extend(np.array(components["vibrancy"])[index])
+        brightnesses.extend(np.array(components["brightness"])[index])
+        uniformities.extend(np.array(components["uniformity"])[index])
+    print(f"Balanced to {min_count} samples per class * {len(produce_classes)} types")
+
+    distribution = {
+        "vibrancy": np.sort(np.array(vibrancies, dtype=np.float32)),
+        "brightness": np.sort(np.array(brightnesses, dtype=np.float32)),
+        "uniformity": np.sort(np.array(uniformities, dtype=np.float32)),
+        # Per-type unsorted arrays for plotting
+        "per_type": {
+            fruit_type: {
+                metric: np.array(components[metric], dtype=np.float32)
+                for metric in ("vibrancy", "brightness", "uniformity")
+            }
+            for fruit_type, components in produce_classes.items()
+        },
+    }
+
+    if not example:
+        for i, save_path in enumerate(save_paths):
+            output_path = Path(save_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(output_path, 'wb') as f:
+                pickle.dump(references if i == 0 else distribution, f)
+                
+            print(f"References successfully saved to {output_path}")
+            print(f"{list(references.keys()) if i == 0 else f'({len(vibrancies)} samples)'}")
+
+    return references, distribution
+
+
+def plot_colour_references(ref_path: str | Path, dist_path: str | Path,
+                           figures_dir: str | Path | None = None) -> None:
+    """Visualise saved colour references and score distributions.
+
+    Produces two separate figures:
+      1. Per-fruit mean colour, median colour, and median HSV histogram.
+      2. Per-type eCDFs overlaid on the balanced global eCDF for each
+         component (vibrancy, brightness, uniformity).
+
+    Args:
+        ref_path: Path to a hist reference pickle file.
+        dist_path: Path to a distribution pickle file.
+        figures_dir: Optional output directory for saving PNGs. Defaults
+            to ``<util_parent>/figures``.
+    """
+    with open(ref_path, "rb") as f:
+        references = pickle.load(f)
+    with open(dist_path, "rb") as f:
+        distributions = pickle.load(f)
+
+    if figures_dir is None:
+        figures_dir = Path(__file__).resolve().parent.parent / "figures"
+    figures_dir = Path(figures_dir)
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    def dominant_rgb(hist):
+        _, _, _, max_loc = cv2.minMaxLoc(hist.astype(np.float32))
+        hue = int(max_loc[1] * 6 + 3)
+        sat = int(max_loc[0] * 8 + 4)
+        return cv2.cvtColor(np.uint8([[[hue, sat, 220]]]),
+                            cv2.COLOR_HSV2RGB)[0][0] / 255.0, hue, sat
+
+    # Figure 1: per-fruit colour references
+    n = len(references)
+    # Wider columns and more vertical room to stop titles overlapping rows.
+    fig1, axes1 = plt.subplots(n, 3, figsize=(14, 3.2 * n), squeeze=False)
+    fig1.suptitle("Healthy Colour References (per fruit type)", fontsize=16)
+
+    for row, (fruit_type, data) in enumerate(sorted(references.items())):
+        mean_hist = data["mean"]
+        median_hist = data["median"]
+
+        mean_rgb, mean_h, mean_s = dominant_rgb(mean_hist)
+        median_rgb, med_h, med_s = dominant_rgb(median_hist)
+
+        # Fruit type sits as a row label on the left, keeping column titles short
+        axes1[row, 0].imshow([[mean_rgb]])
+        axes1[row, 0].set_title(f"Mean\nH={mean_h}  S={mean_s}", fontsize=10)
+        axes1[row, 0].set_ylabel(fruit_type, fontsize=11, fontweight="bold",
+                                 rotation=0, labelpad=45, va="center")
+        axes1[row, 0].set_xticks([])
+        axes1[row, 0].set_yticks([])
+
+        axes1[row, 1].imshow([[median_rgb]])
+        axes1[row, 1].set_title(f"Median\nH={med_h}  S={med_s}", fontsize=10)
+        axes1[row, 1].axis("off")
+
+        axes1[row, 2].imshow(median_hist.T, origin="lower", aspect="auto",
+                             extent=[0, 180, 0, 256], cmap="hot")
+        axes1[row, 2].set_title("Median HSV Histogram", fontsize=10)
+        axes1[row, 2].set_ylabel("Sat")
+        if row == n - 1:
+            axes1[row, 2].set_xlabel("Hue")
+
+    fig1.tight_layout(rect=[0, 0, 1, 0.97])
+    fig1_path = figures_dir / "colour_references_per_type.png"
+    fig1.savefig(fig1_path, dpi=150, bbox_inches="tight")
+    print(f"Saved {fig1_path}")
+
+    # Figure 2: per-type vs balanced global eCDFs (plotly, interactive)
+    dist_metrics = ["vibrancy", "brightness", "uniformity"]
+    per_type = distributions.get("per_type", {})
+    # Hex colours from matplotlib's tab20 for consistency with Figure 1
+    cmap = plt.cm.tab20(np.linspace(0, 1, max(len(per_type), 1)))
+    type_colors = ["#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255))
+                   for r, g, b, _ in cmap]
+
+    fig2 = make_subplots(
+        rows=1, cols=3,
+        subplot_titles=[m.capitalize() for m in dist_metrics],
+        horizontal_spacing=0.08,
+    )
+
+    for col, metric in enumerate(dist_metrics, start=1):
+        global_scores = distributions.get(metric, [])
+        if len(global_scores) == 0:
+            continue
+
+        # Per-type eCDFs — grouped in legend so one click toggles all panels for a fruit
+        for (fruit_type, comps), color in zip(sorted(per_type.items()), type_colors):
+            type_scores = np.sort(comps[metric])
+            type_percentiles = np.arange(1, len(type_scores) + 1) / len(type_scores)
+            fig2.add_trace(
+                go.Scatter(
+                    x=type_scores, y=type_percentiles,
+                    mode="lines",
+                    line=dict(color=color, width=1),
+                    opacity=0.6,
+                    name=fruit_type,
+                    legendgroup=fruit_type,
+                    showlegend=(col == 1),
+                    hovertemplate=f"{fruit_type}<br>{metric}=%{{x:.3f}}<br>pct=%{{y:.2f}}<extra></extra>",
+                ),
+                row=1, col=col,
+            )
+
+        # Balanced global eCDF
+        sorted_global = np.sort(global_scores)
+        global_percentiles = np.arange(1, len(sorted_global) + 1) / len(sorted_global)
+        fig2.add_trace(
+            go.Scatter(
+                x=sorted_global, y=global_percentiles,
+                mode="lines",
+                line=dict(color="black", width=2.5),
+                name="Balanced global",
+                legendgroup="global",
+                showlegend=(col == 1),
+                hovertemplate=f"balanced<br>{metric}=%{{x:.3f}}<br>pct=%{{y:.2f}}<extra></extra>",
+            ),
+            row=1, col=col,
+        )
+
+        # Median vertical line
+        median_val = float(np.median(sorted_global))
+        fig2.add_vline(
+            x=median_val, line=dict(color="red", dash="dash", width=1),
+            annotation_text=f"median {median_val:.2f}",
+            annotation_position="top right",
+            row=1, col=col,
+        )
+
+        fig2.update_xaxes(title_text=f"Raw {metric.capitalize()}", row=1, col=col)
+        fig2.update_yaxes(range=[0, 1.05], row=1, col=col)
+        if col == 1:
+            fig2.update_yaxes(title_text="Percentile", row=1, col=col)
+
+    fig2.update_layout(
+        title="Generic Colour Distributions: per-type vs balanced global eCDF",
+        height=500, width=1400,
+        legend=dict(yanchor="middle", y=0.5, xanchor="left", x=1.02, font=dict(size=10)),
+        margin=dict(l=60, r=180, t=80, b=60),
+    )
+
+    fig2_html_path = figures_dir / "generic_colour_ecdfs.html"
+    fig2.write_html(str(fig2_html_path))
+    print(f"Saved {fig2_html_path}")
+
+    plt.show()
+    fig2.show()
+
+if __name__ == "__main__":
+    util_dir = Path(__file__).resolve().parent
+    dataset_dir = util_dir.parent / "data" / "Fruit_And_Vegetable_Diseases_Dataset"
+    mask_dir = util_dir.parent / "data" / "rembg_masks"
+    ref_path = util_dir.parent / "data" / "colour_references_rembg.pkl"
+    dist_path = util_dir.parent / "data" / "generic_colour_distribution.pkl"
+
+    # Build and save references
+    print("Building colour references...")
+    build_colour_references(dataset_dir, mask_root=mask_dir, save_paths=[str(ref_path), str(dist_path)])
+
+    # Visualise from saved pickle
+    plot_colour_references(str(ref_path), str(dist_path))
