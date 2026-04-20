@@ -10,12 +10,6 @@ def assign_display_names(module) -> None:
             obj.display_name = name
 
 @dataclass
-class Scheduler:
-    type: str = "StepLR"
-    step_size: int = 5
-    gamma: float = 0.1
-
-@dataclass
 class Training:
     transfer_type: str = "FREEZE"
     learning_rate: float = 1e-3
@@ -26,7 +20,6 @@ class Experiment:
     display_name: str
     architecture: str
     training: Training
-    scheduler: Scheduler
     optimizer: str = "adamw"
     primary_task_weight: float = 1.0
     display_name: str = field(init=False, default="")
