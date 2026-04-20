@@ -5,7 +5,7 @@ Dataclasses used for intellisense.
 """
 import sys
 sys.path.append(".")
-from .schema import Experiment, Scheduler, Training, assign_display_names
+from .schema import Experiment, Training, assign_display_names
 
 # EXPERIMENTS
 
@@ -14,7 +14,6 @@ from .schema import Experiment, Scheduler, Training, assign_display_names
 EX1_EFFICIENTNET_FREEZE = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(),
-    scheduler=Scheduler(),
     optimizer= "sgd"
 )
 
@@ -22,9 +21,7 @@ EX1_EFFICIENTNET_FREEZE = Experiment(
 EX2_EFFICIENTNET_FINETUNE = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    scheduler=Scheduler(),
     optimizer= "sgd"
-
 )
 
 
@@ -32,7 +29,6 @@ EX2_EFFICIENTNET_FINETUNE = Experiment(
 EX3_EFFICIENTNET_FINETUNE_MTL = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    scheduler=Scheduler(),
     optimizer= "sgd",
     primary_task_weight=0.8,
 )
@@ -45,21 +41,19 @@ EX3_EFFICIENTNET_FINETUNE_MTL = Experiment(
 EX4_SWIN_FREEZE = Experiment(
     architecture="swin_s",
     training=Training(transfer_type="FREEZE", learning_rate=1e-5),
-    scheduler=Scheduler(),
 )
 
 # EX-5 - Finetuned swin_s
 EX5_SWIN_FINETUNE = Experiment(
     architecture="swin_s",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
-    scheduler=Scheduler(),
 )
 
 # EX-6 - MTL finetuned swin_s
 EX6_SWIN_FINETUNE_MTL = Experiment(
     architecture="swin_s",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
-    scheduler=Scheduler(),
+    primary_task_weight=0.8,
 )
 
 # --- MaxViT Hybrid (maxvit_t) experiments ---
@@ -70,21 +64,19 @@ EX6_SWIN_FINETUNE_MTL = Experiment(
 EX7_MAXVIT_FREEZE = Experiment(
     architecture="maxvit_t",
     training=Training(transfer_type="FREEZE", learning_rate=1e-5),
-    scheduler=Scheduler(),
 )
 
 # EX-8 - Finetuned maxvit_t
 EX8_MAXVIT_FINETUNE = Experiment(
     architecture="maxvit_t",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
-    scheduler=Scheduler(),
 )
 
 # EX-9 - MTL finetuned maxvit_t
 EX9_MAXVIT_FINETUNE_MTL = Experiment(
     architecture="maxvit_t",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
-    scheduler=Scheduler(),
+    primary_task_weight=0.8,
 )
 
 assign_display_names(sys.modules[__name__])
