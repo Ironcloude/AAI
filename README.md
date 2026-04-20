@@ -14,13 +14,12 @@ source .venv/bin/activate
 .\.venv\Scripts\activate
 
 # Install base requirements 
-uv python -r requirements.txt
+uv pip install -r requirements.txt
 # [Optional] For GPU acceleration (find specific version here: https://pytorch.org/get-started/locally/)
 uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 
-# Display logs with Tensorboard with
-tensorboard --logdir <task>/runs/<log_directory>
-
+# Training metrics log to Weights & Biases (one-time):
+wandb login # https://wandb.ai/jaimespencer2-/projects
 ```
 
 ## TASK 2: Image Classification
