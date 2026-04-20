@@ -228,9 +228,9 @@ Grape/
 task_2/data/sam2_large_masks
 task_2/runs/*
 wandb/
+task_2/data/rembg_masks
 task_2/wandb/
 task_2/data/rembg_masks
-
 # Model checkpoints
 task_2/models/*.pth
 task_2/models/*.safetensors
