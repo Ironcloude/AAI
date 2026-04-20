@@ -5,7 +5,7 @@ Dataclasses used for intellisense.
 """
 import sys
 sys.path.append(".")
-from .schema import Experiment, Scheduler, Training, assign_display_names
+from .schema import Experiment, Training, assign_display_names
 
 # EXPERIMENTS
 
@@ -53,6 +53,7 @@ EX5_SWIN_FINETUNE = Experiment(
 EX6_SWIN_FINETUNE_MTL = Experiment(
     architecture="swin_s",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    primary_task_weight=0.8,
 )
 
 # --- MaxViT Hybrid (maxvit_t) experiments ---
@@ -75,6 +76,7 @@ EX8_MAXVIT_FINETUNE = Experiment(
 EX9_MAXVIT_FINETUNE_MTL = Experiment(
     architecture="maxvit_t",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    primary_task_weight=0.8,
 )
 
 assign_display_names(sys.modules[__name__])

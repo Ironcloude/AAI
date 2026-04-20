@@ -206,16 +206,14 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Misc
+*.exe
+test_screenshots/
+
 # Datasets
 Fruit_And_Vegetable_Diseases_Dataset/
 "Fruit And Vegetable Diseases Dataset/"
 fruit-and-vegetable-disease-healthy-vs-rotten.zip
-
-# Model checkpoints
-task_2/models/*.pth
-
-# TensorBoard logs
-task_2/runs/
 
 # Additional datasets (large, not tracked)
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_dups/
@@ -227,6 +225,12 @@ task_2/data/dirty_hashes.pkl
 golden_dataset/
 Grape/
 
-# Misc
-*.exe
-test_screenshots/
+task_2/data/sam2_large_masks
+task_2/runs/*
+wandb/
+task_2/wandb/
+task_2/data/rembg_masks
+
+# Model checkpoints
+task_2/models/*.pth
+task_2/models/*.safetensors
