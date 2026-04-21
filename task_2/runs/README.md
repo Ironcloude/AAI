@@ -1,1 +1,0 @@
-View logs with ```tensorboard --logdir task_2/runs```
