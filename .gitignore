@@ -1,3 +1,7 @@
+data_preparation/instacart/*
+data_preparation/instacart.zip
+data_preparation/insta_clean_data.csv 
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

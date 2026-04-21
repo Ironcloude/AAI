@@ -1,0 +1,4 @@
+https://www.kaggle.com/datasets/heeraldedhia/groceries-dataset
+
+https://www.kaggle.com/datasets/yasserh/instacart-online-grocery-basket-analysis-dataset?select=products.csv
+
