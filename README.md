@@ -22,6 +22,41 @@ uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu
 wandb login # https://wandb.ai/jaimespencer2-/projects
 ```
 
+
+
+### Project Structure & Responsibility
+```text
+task_2/
+├── data/                       # Datasets, masks, and serialized reference files
+│   ├── colour_references_rembg.pkl  # Pickled HSV histograms for healthy fruit types
+│   ├── generic_colour_distribution.pkl # Empirical CDFs for vibrancy, brightness, and uniformity
+│   ├── README.md               # Documentation for the data directory
+│   ├── rembg_masks/            # Segmentation masks generated via rembg
+│   └── test_data/              # Sample images for testing and inference
+├── figures/                    # Analysis plots and result visualizations
+│   ├── colour_references_per_type.png # Visual summary of fruit-specific colour baselines
+│   ├── generic_colour_ecdfs.html # Interactive Plotly eCDF curves for colour components
+│   └── generic_colour_ecdfs.png  # Static snapshot of the eCDF curves
+├── __init__.py                 # Makes task_2 a Python package
+├── models/                     # Saved model checkpoints
+│   └── EX3_efficientnet_finetune_mtl_20260414183210.safetensors # Pre-trained MTL weights
+├── runs/                       # Experiment logs and metadata
+│   └── README.md               # Documentation for tracking experiments
+├── task_2_inference.ipynb      # Notebook for quality assessment and model inference
+├── task_2_train.ipynb          # Notebook for training the Multi-Task Learning model
+└── utils/                      # Core logic and helper modules
+    ├── build_references.py     # Script to calculate baseline colour stats from healthy produce
+    ├── data_count.py           # Utility to print dataset class distribution
+    ├── dataset.py              # PyTorch Dataset for produce health/type classification
+    ├── generate_masks.py       # Segmentation logic using SAM2, rembg, or GrabCut
+    ├── grade_produce.py        # Logic for colour and shape (solidity) quality grading
+    ├── __init__.py             # Makes utils a Python package
+    ├── mtl_model.py            # MultiTaskClassifier architecture (backbone + dual heads)
+    └── utils.py                # Generic helpers like reproducibility seeding
+```
+
+
+
 ## TASK 2: Image Classification
 |   |   |   | 
 |---|---|---|
@@ -38,7 +73,7 @@ wandb login # https://wandb.ai/jaimespencer2-/projects
 
 |  Model | Architecture  |  Notes |   
 |---|---|---|
-|  [**EfficientNetV2**](https://arxiv.org/pdf/2104.00298)|  CNN  | <ul><li>Top-performing models at a fraction of performance.<li>Data effecient</li><li>Better heatmaps than transformers (XAI)</li></ul> |
+|  [**EfficientNetV2**](https://arxiv.org/pdf/2104.00298)|  CNN  | <ul><li>Top-performing models at a fraction of performance.<li>Data efficient</li><li>Better heatmaps than transformers (XAI)</li></ul> |
 |  Swin | Transformer  | <ul><li>Data hungry but possibly better performance.</li><li>Allegedly poorer XAI</li></ul>|
 | MaxVit_T | Hybrid | -- |
 
@@ -69,7 +104,7 @@ Models variants across the three architectures with comporable _GFLOPS_ were sel
 | Optimizer | AdamW, SGD, RMSprop | --- |
 | Learning rate (LR) | --- | --- |
 | Learning rate schedular | --- | --- |
-| Epcohs | --- | --- |
+| Epochs | --- | --- |
 | Batch size | --- |  --- |
 | Weight decay | --- | --- |
 | Kernel Size | --- | CNN |
