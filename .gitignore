@@ -237,3 +237,6 @@ task_2/models/*.safetensors
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical.zip
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug.zip
+task_2/data/golden_dataset.zip
+task_2/data/rembg_masks.zip
+task_2/models/determine_data_runs
