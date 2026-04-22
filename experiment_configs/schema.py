@@ -23,6 +23,9 @@ class Experiment:
     optimizer: str = "adamw"
     primary_task_weight: float = 1.0
     display_name: str = field(init=False, default="")
+    aug_magnitude: int = 0 
+    batch_size: int = 16
+    acc_steps: int = 2
     @property
     def is_mtl(self) -> bool:
         """True iff type head receives non-zero loss weighting."""
@@ -41,7 +44,9 @@ class Experiment:
 # Maps architecture name -> torchvision pretrained weights string
 # Added swin_s (Transformer) and maxvit_t (Hybrid) to support new experiments
 torch_weight_map = {
-    "efficientnet_v2_s": "EfficientNet_V2_S_Weights.IMAGENET1K_V1",
-    "swin_s":            "Swin_S_Weights.IMAGENET1K_V1",
-    "maxvit_t":          "MaxVit_T_Weights.IMAGENET1K_V1",
+    "efficientnet_v2_s":    "EfficientNet_V2_S_Weights.IMAGENET1K_V1",
+    "swin_s":               "Swin_S_Weights.IMAGENET1K_V1",
+    "maxvit_t":             "MaxVit_T_Weights.IMAGENET1K_V1",
+    "efficientnet_b4":      "EfficientNet_B4_Weights.IMAGENET1K_V1",
+    "swin_t":               "Swin_T_Weights.IMAGENET1K_V1",
 }

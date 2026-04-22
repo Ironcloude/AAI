@@ -210,5 +210,5 @@ def create_calibration_plots(model: torch.nn.Module, model_save_name: str | None
     figures_dir = Path(__file__).resolve().parent.parent / "figures"
     figures_dir = Path(figures_dir)
     figures_dir.mkdir(parents=True, exist_ok=True)
-    fig_path = figures_dir / "calibration_ece.png"
+    fig_path = figures_dir / f"calibration_ece{experiment.display_name}.png"
     fig.write_image(fig_path, scale=2)  
