@@ -15,8 +15,16 @@ ID val is over-saturated; selection is based on:
 2. Identify best STL architecture at fixed optimizer (AdamW): EfficientNet vs Swin vs MaxViT
 3. On winning arch, MTL vs STL with unified stopping criterion (primary-task loss)
 4. On winning arch, architectural ablations:
-   - freeze / partial-freeze / finetune
+   - freeze / partial-freeze (last body stage) / finetune
    - pretrained / random-init
    - class-weighted / unweighted loss
 5. Augmentation ablation on best config from (4
 6. Post-hoc: temperature scaling on val > OOD ECE check
+
+# Model Architectures
+### EfficientNetV2-S
+![alt text](media/EfficientNetV2-S.png)
+### Swin-T
+![alt text](media/swin-t.png)
+### MaxViT
+![alt text](media/maxvit.png)
