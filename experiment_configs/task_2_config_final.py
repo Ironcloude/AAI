@@ -21,14 +21,14 @@ from .schema import Experiment, Training, assign_display_names
 # 6. Post-hoc: temperature scaling on val > OOD ECE check
 
 # 
-# --- Efficientnet v2 (efficientnet_v2_) experiments ---
+# Efficientnet v2 (CNN)
 # EX-1 - Finetuned efficientnet_v2_s baseline
 # 21.4m Paramaters, 8.37 GLOPs
 EX1_EFFICIENTNET_FINETUNE = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-4), 
 )
-# --- Swin Transformer (swin_s) experiments ---
+# Swin Transformer (Transformer)
 # Swin uses a shifted-window attention mechanism instead of convolutions.
 # Slightly lower learning rate since Transformers are more sensitive to LR.
 # 49.6M Parameters, 8.74 GLOPs
@@ -36,8 +36,7 @@ EX2_SWIN_FINETUNE = Experiment(
     architecture="swin_s",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5), # Defined by Swin paper
 )
-# # --- MaxViT Hybrid (maxvit_t) experiments ---
-# MaxViT combines local convolution blocks with global attention - a hybrid approach.
+# MaxViT (Hybrid) combines local convolution blocks with global attention - a hybrid approach.
 # Uses similalry conservative LR as Swin due to attention components.
 # 30.9m Parameters, 5.56 GLOPs
 EX3_MAXVIT_FINETUNE = Experiment(
@@ -45,11 +44,8 @@ EX3_MAXVIT_FINETUNE = Experiment(
     training=Training(transfer_type="FINETUNE", learning_rate=5e-5), # Defined by maxvit paper
 )
 
-# Comparable GLOP comparsion 
-# ENET_2 => ENET_B4     4.39
-# Swin_s => Swin_v2_t   4.49
-# MaxVit_t => Same      5.57    
-# EX-1T - Finetuned effecientnet b4 baseline
+# Comparable "tiny" variants for fair comparison to maxvit.
+# EX-1T - effecientnet_b4, 4.39 GFLOPS
 EX1T_EFFICIENTNET_FINETUNE = Experiment(
     architecture="efficientnet_b4",
     training=Training(transfer_type="FINETUNE"),
@@ -57,86 +53,82 @@ EX1T_EFFICIENTNET_FINETUNE = Experiment(
     acc_steps =  4
 )
 
-# EX-2T - Finetuned swin_t
+# EX-2T - swin_t,  4.49 GLOPS
 EX2T_SWIN_FINETUNE = Experiment(
     architecture="swin_t",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5), 
 )
 
-# EX- - Frozen efficientnet_v2_s baseline
-# )
-# EX_EFFICIENTNET_FREEZE = Experiment(
-#     architecture="efficientnet_v2_s",
-#     training=Training(),
-#     optimizer= "adamw"
-# )
+# MTL EXPERIMENTS
+EX4a_EFFICIENTNET_FINETUNE_MTL = Experiment(
+    architecture="efficientnet_v2_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-4), 
+    primary_task_weight=0.9
+)
+EX4b_EFFICIENTNET_FINETUNE_MTL = Experiment(
+    architecture="efficientnet_v2_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-4), 
+    primary_task_weight=0.75
+)
+EX4c_EFFICIENTNET_FINETUNE_MTL = Experiment(
+    architecture="efficientnet_v2_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-4),
+    primary_task_weight=0.5 
+)
 
-# # EX- - MTL finetuned efficientnet_v2_s
-# EX_EFFICIENTNET_FINETUNE_MTL = Experiment(
-#     architecture="efficientnet_v2_s",
-#     training=Training(transfer_type="FINETUNE"),
-#     optimizer= "adamw",
-#     primary_task_weight=0.8,
-# )
+EX5a_MAXVIT_FINETUNE_MTL = Experiment(
+    architecture="maxvit_t",
+    training=Training(transfer_type="FINETUNE", learning_rate=5e-5),
+    primary_task_weight=0.9
+)
 
+EX5b_MAXVIT_FINETUNE_MTL = Experiment(
+    architecture="maxvit_t",
+    training=Training(transfer_type="FINETUNE", learning_rate=5e-5),
+    primary_task_weight=0.75
+)
 
-# # EX- Frozen swin_s baseline (transfer learning only)
-# EX_SWIN_FREEZE = Experiment(
-#     architecture="swin_s",
-#     training=Training(transfer_type="FREEZE", learning_rate=1e-5),
-# )
+EX5c_MAXVIT_FINETUNE_MTL = Experiment(
+    architecture="maxvit_t",
+    training=Training(transfer_type="FINETUNE", learning_rate=5e-5),
+    primary_task_weight=0.5
+)
 
-# # EX- Finetuned swin_s
-# EX_SWIN_FINETUNE = Experiment(
-#     architecture="swin_s",
-#     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
-# )
+EX6a_SWIN_FINETUNE_MTL = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    primary_task_weight=0.9
+)
 
-# # EX- MTL finetuned swin_s
-# EX_SWIN_FINETUNE_MTL = Experiment(
-#     architecture="swin_s",
-#     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
-#     primary_task_weight=0.8,
-# )
+EX6b_SWIN_FINETUNE_MTL = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    primary_task_weight=0.75
+)
 
+EX6c_SWIN_FINETUNE_MTL = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    primary_task_weight=0.5
+)
 
-# # EX- Frozen maxvit_t baseline (transfer learning only)
-# EX_MAXVIT_FREEZE = Experiment(
-#     architecture="maxvit_t",
-#     training=Training(transfer_type="FREEZE", learning_rate=1e-5),
-# )
-
-
-# # EX- MTL finetuned maxvit_t
-# EX_MAXVIT_FINETUNE_MTL = Experiment(
-#     architecture="maxvit_t",
-#     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
-#     primary_task_weight=0.8,
-# )
-
- 
-# # EX - MTL finetuned efficientnet_v2_s aug 7
-# EX_EFFICIENTNET_FINETUNE_AUG = Experiment(
-#     architecture="efficientnet_v2_s",
-#     training=Training(transfer_type="FINETUNE"),
-#     optimizer= "adamw",
-#     aug_magnitude = 7
-# )
-
-# # EX - MTL finetuned efficientnet_v2_s aug 10
-# EX_EFFICIENTNET_FINETUNE_AUG = Experiment(
-#     architecture="efficientnet_v2_s",
-#     training=Training(transfer_type="FINETUNE"),
-#     optimizer= "adamw",
-#     aug_magnitude = 10
-# )
-
-# # EX - MTL finetuned efficientnet_v2_s aug 13
-# EX_EFFICIENTNET_FINETUNE_AUG = Experiment(
-#     architecture="efficientnet_v2_s",
-#     training=Training(transfer_type="FINETUNE"),
-#     optimizer= "adamw",
-#     aug_magnitude = 13
-# )
+# Ablations on winning architecture (Swin-T) 
+EX7a_SWIN_MTL_FREEZE = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FREEZE", learning_rate=1e-4),
+    primary_task_weight=0.9
+)
+EX7b_SWIN_MTL_SCRATCH = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    pretrained=False,
+    primary_task_weight=0.9
+)
+EX7c_SWIN_MTL_UNWEIGHTED = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    class_weighted=False,
+    primary_task_weight=0.9
+)
 
 assign_display_names(sys.modules[__name__])

@@ -11,6 +11,7 @@ def assign_display_names(module) -> None:
 
 @dataclass
 class Training:
+    # One of: "FREEZE", "FINETUNE"
     transfer_type: str = "FREEZE"
     learning_rate: float = 1e-3
     momentum: float = 0.9
@@ -23,9 +24,11 @@ class Experiment:
     optimizer: str = "adamw"
     primary_task_weight: float = 1.0
     display_name: str = field(init=False, default="")
-    aug_magnitude: int = 0 
+    aug_magnitude: int = 0
     batch_size: int = 16
     acc_steps: int = 2
+    pretrained: bool = True       # False = random init (skip torchvision weight load)
+    class_weighted: bool = True   # False = plain CE (no class balancing)
     @property
     def is_mtl(self) -> bool:
         """True iff type head receives non-zero loss weighting."""

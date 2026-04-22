@@ -23,11 +23,23 @@ DATASETS = {
 }
 
 EXPERIMENTS = [
-    experiments.EX1_EFFICIENTNET_FINETUNE,
-    experiments.EX2_SWIN_FINETUNE,
-    experiments.EX3_MAXVIT_FINETUNE,
-    experiments.EX1T_EFFICIENTNET_FINETUNE,
-    experiments.EX2T_SWIN_FINETUNE,
+    # experiments.EX1_EFFICIENTNET_FINETUNE,
+    # experiments.EX2_SWIN_FINETUNE,
+    # experiments.EX3_MAXVIT_FINETUNE,
+    # experiments.EX1T_EFFICIENTNET_FINETUNE,
+    # experiments.EX2T_SWIN_FINETUNE,
+    # experiments.EX4a_EFFICIENTNET_FINETUNE_MTL,
+    # experiments.EX4b_EFFICIENTNET_FINETUNE_MTL,
+    # experiments.EX4c_EFFICIENTNET_FINETUNE_MTL,
+    # experiments.EX5a_MAXVIT_FINETUNE_MTL,
+    # experiments.EX5b_MAXVIT_FINETUNE_MTL,
+    # experiments.EX5c_MAXVIT_FINETUNE_MTL
+    # experiments.EX6a_SWIN_FINETUNE_MTL,
+    # experiments.EX6b_SWIN_FINETUNE_MTL,
+    # experiments.EX6c_SWIN_FINETUNE_MTL
+    experiments.EX7a_SWIN_MTL_FREEZE,
+    experiments.EX7b_SWIN_MTL_SCRATCH,
+    experiments.EX7c_SWIN_MTL_UNWEIGHTED,
 ]
 
 def ensure_parameters_tag(notebook_path: Path) -> None:
