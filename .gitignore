@@ -236,3 +236,7 @@ rembg_masks.zip
 # Model checkpoints
 task_2/models/*
 
+task_2/data/golden_dataset.zip
+task_2/figures
+task_2/data/rembg_masks.zip
+task_2/data/fruit-and-vegetable-disease-healthy-vs-rotten.zip
