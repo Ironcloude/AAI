@@ -35,7 +35,6 @@ EX2_EFFICIENTNET_FINETUNE = Experiment(
     optimizer= "adamw"
 )
 
-
 # EX-3 - MTL finetuned efficientnet_v2_s
 EX3_EFFICIENTNET_FINETUNE_MTL = Experiment(
     architecture="efficientnet_v2_s",
@@ -89,13 +88,11 @@ EX9_MAXVIT_FINETUNE_MTL = Experiment(
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
     primary_task_weight=0.8,
 )
-
- 
+# --- Aug experiments ---
 # EX-10 - MTL finetuned efficientnet_v2_s aug 7
 EX10_EFFICIENTNET_FINETUNE_AUG = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    optimizer= "adamw",
     aug_magnitude = 7
 )
 
@@ -103,7 +100,6 @@ EX10_EFFICIENTNET_FINETUNE_AUG = Experiment(
 EX11_EFFICIENTNET_FINETUNE_AUG = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    optimizer= "adamw",
     aug_magnitude = 10
 )
 
@@ -111,7 +107,6 @@ EX11_EFFICIENTNET_FINETUNE_AUG = Experiment(
 EX12_EFFICIENTNET_FINETUNE_AUG = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    optimizer= "adamw",
     aug_magnitude = 13
 )
 
