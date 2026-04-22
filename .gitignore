@@ -227,13 +227,12 @@ task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug.zip
 golden_dataset/
 Grape/
-
 task_2/data/sam2_large_masks
 task_2/runs/*
 wandb/
 task_2/data/rembg_masks
 task_2/wandb/
-task_2/data/rembg_masks
-# Model checkpoints
 rembg_masks.zip
+# Model checkpoints
 task_2/models/*
+
