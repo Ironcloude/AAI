@@ -22,7 +22,7 @@ DATASETS = {
     "clean" : "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug", # deduplicated, no augmentation
 }
 
-# SEEDS = [45, 43, 44]  # For multiple runs per config to get variance estimates
+SEEDS = [43]  # For multiple runs per config to get variance estimates
 
 EXPERIMENTS = [
     # experiments.EX1_EFFICIENTNET_FINETUNE,
@@ -42,7 +42,7 @@ EXPERIMENTS = [
     # experiments.EX7a_SWIN_MTL_FREEZE,
     # experiments.EX7b_SWIN_MTL_SCRATCH,
     # experiments.EX7c_SWIN_MTL_UNWEIGHTED,
-    experiments.EX8a_SWIN_FINETUNE_MTL_AUG
+    experiments.EX8_SWIN_FINETUNE_MTL_AUG
 ]
 
 def ensure_parameters_tag(notebook_path: Path) -> None:
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     runs = [(experiment, label, path, seed) for experiment in EXPERIMENTS for label, path in DATASETS.items() for seed in SEEDS]
     if len(SEEDS) > 0:
         print("\n",*runs, sep='\n')
-        input(f"\nAbout to run across {len(SEEDS)} non-42 seeds. Press Enter to confirm...")
+        input(f"\nAbout to run across {len(SEEDS)} seeds. Press Enter to confirm...")
     total = len(runs)
     for i, (experiment, dataset_label, dataset_path, seed) in enumerate(runs, start=1):
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
