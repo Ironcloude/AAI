@@ -131,4 +131,12 @@ EX7c_SWIN_MTL_UNWEIGHTED = Experiment(
     primary_task_weight=0.9
 )
 
+# Augmentation 
+EX8a_SWIN_FINETUNE_MTL_AUG = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    primary_task_weight=0.9,
+    aug_magnitude=1
+)
+
 assign_display_names(sys.modules[__name__])
