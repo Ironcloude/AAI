@@ -12,16 +12,19 @@ from generate_masks import generate_produce_mask
 from grade_produce import compute_colour_components
 
 
+
 def build_colour_references(dataset_root: str | Path, mask_root: str | Path = None,
                             example: bool = False, 
                             save_paths: list[str] = ["colour_reference.pkl",
                                                      "generic_colour_distribution.pkl"]
                             ) -> dict:
-    """Build per-fruit-type reference HSV histograms and colour disitributions
-    from healthy training images.
+    """Build per-fruit-type reference HSV and LAB histograms and colour
+    disitributions from healthy training images.
 
     The histograms serve as a baseline reference for colour scoring of known fruit
-    at inference time.
+    at inference time. HSV (hue, saturation) captures colour-identity;
+    LAB (a*, b*) captures perceptual chroma and is more robust to illumination
+    shifts, which helps when comparing produce across lighting conditions.
 
     The colour distribution reference serves in normalising similarity scores;
     raw metrics skew towards a lower baseline.
@@ -33,7 +36,7 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
         save_path: Output path for reference and distrubtion pickle files.
 
     Returns:
-        Dictionary of reference histograms and hsv distribution.
+        Dictionary of reference histograms (HSV + LAB) and hsv distribution.
     """
 
     references = {}
@@ -53,6 +56,7 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
         cls_vibrancy, cls_brightness, cls_uniformity = [], [], []
         fruit_type = produce_directory.name.split("__")[0].strip().lower()
         histograms = []
+        lab_histograms = []
         drop_count = 0
         # For each produce
         for image_path in produce_directory.iterdir():
@@ -61,10 +65,12 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
             
             # Read into np array BGR order
             # Convert BGR (Blue:Green:Red) to HSV (Hue:Saturation:Value)
+            # and LAB (Lightness:a*[green-red]:b*[blue-yellow])
             produce_image = cv2.imread(str(image_path))
             if produce_image is None:
                 continue
             hsv_produce_image = cv2.cvtColor(produce_image, cv2.COLOR_BGR2HSV)
+            lab_produce_image = cv2.cvtColor(produce_image, cv2.COLOR_BGR2LAB)
 
             # Load pre-computed mask if available, otherwise fallback to rembg
             mask = None
@@ -93,23 +99,34 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
             # Calculate frequency distribution of pixel values
             # More bins; more precision.
             hist = cv2.calcHist(
-                images=[hsv_produce_image], 
+                images=[hsv_produce_image],
                 channels=[0, 1],        # Channels for hue and saturation
-                mask=mask, 
-                histSize=[30, 32],      # bin counts (hue, saturation). 
+                mask=mask,
+                histSize=[30, 32],      # bin counts (hue, saturation).
                 ranges=[0, 180, 0, 256] # 0-180 (hue); 0-256 (saturation)
             )
             # Scale histogram to 1 (larger images don't dominate; proportional)
             cv2.normalize(hist, hist)
 
-            # Skip if dominant colour (max loc) is very low saturation 
+            # LAB histogram over chromatic channels (a*, b*); L* dropped so the
+            # reference is illumination-invariant.
+            lab_hist = cv2.calcHist(
+                images=[lab_produce_image],
+                channels=[1, 2],          # a* and b*
+                mask=mask,
+                histSize=[32, 32],
+                ranges=[0, 256, 0, 256],  # OpenCV 8-bit LAB: a,b in [0,255]
+            )
+            cv2.normalize(lab_hist, lab_hist)
+
+            # Skip if dominant colour (max loc) is very low saturation
             # Likely faulty mask isolating background
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(hist) 
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(hist)
             # remove saturation bin < 5 out of 32 == 16% of lower end
-            if max_loc[0] < 5: 
+            if max_loc[0] < 5:
                 drop_count += 1
                 continue
-            
+
             fruit_pixels = hsv_produce_image[mask == 1]
             vibrancy, brightness, uniformity = compute_colour_components(fruit_pixels)
             cls_vibrancy.append(vibrancy)
@@ -117,15 +134,19 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
             cls_uniformity.append(uniformity)
 
             histograms.append(hist)
+            lab_histograms.append(lab_hist)
             
         print(f"{produce_directory.name}: {len(cls_vibrancy)} samples, {drop_count} dropped")
         
         if histograms:
             stacked = np.array(histograms) # stack all histograms for mean/media ops
+            lab_stacked = np.array(lab_histograms)
             references[fruit_type] = {
                 "mean": np.mean(stacked, axis=0).astype(np.float32),
                 "median": np.median(stacked, axis=0).astype(np.float32),
-            }   
+                "lab_mean": np.mean(lab_stacked, axis=0).astype(np.float32),
+                "lab_median": np.median(lab_stacked, axis=0).astype(np.float32),
+            }
 
         produce_classes[fruit_type] = {"vibrancy": cls_vibrancy, "brightness": cls_brightness, "uniformity": cls_uniformity}
 
@@ -200,29 +221,40 @@ def plot_colour_references(ref_path: str | Path, dist_path: str | Path,
         return cv2.cvtColor(np.uint8([[[hue, sat, 220]]]),
                             cv2.COLOR_HSV2RGB)[0][0] / 255.0, hue, sat
 
-    # Figure 1: per-fruit colour references
+    def dominant_lab_rgb(hist, L=200):
+        # hist is indexed [a_bin, b_bin]; minMaxLoc returns (col, row) = (b, a)
+        _, _, _, max_loc = cv2.minMaxLoc(hist.astype(np.float32))
+        a = int(max_loc[1] * 8 + 4)
+        b = int(max_loc[0] * 8 + 4)
+        rgb = cv2.cvtColor(np.uint8([[[L, a, b]]]),
+                           cv2.COLOR_LAB2RGB)[0][0] / 255.0
+        return rgb, a, b
+
+    # Figure 1: per-fruit colour references (HSV + LAB side-by-side)
     n = len(references)
-    # Wider columns and more vertical room to stop titles overlapping rows.
-    fig1, axes1 = plt.subplots(n, 3, figsize=(14, 3.2 * n), squeeze=False)
+    # 5 cols: mean HSV, median HSV, HSV hist, median LAB, LAB hist.
+    fig1, axes1 = plt.subplots(n, 5, figsize=(20, 3.2 * n), squeeze=False)
     fig1.suptitle("Healthy Colour References (per fruit type)", fontsize=16)
 
     for row, (fruit_type, data) in enumerate(sorted(references.items())):
         mean_hist = data["mean"]
         median_hist = data["median"]
+        lab_median_hist = data["lab_median"]
 
         mean_rgb, mean_h, mean_s = dominant_rgb(mean_hist)
         median_rgb, med_h, med_s = dominant_rgb(median_hist)
+        lab_rgb, lab_a, lab_b = dominant_lab_rgb(lab_median_hist)
 
         # Fruit type sits as a row label on the left, keeping column titles short
         axes1[row, 0].imshow([[mean_rgb]])
-        axes1[row, 0].set_title(f"Mean\nH={mean_h}  S={mean_s}", fontsize=10)
+        axes1[row, 0].set_title(f"HSV Mean\nH={mean_h}  S={mean_s}", fontsize=10)
         axes1[row, 0].set_ylabel(fruit_type, fontsize=11, fontweight="bold",
                                  rotation=0, labelpad=45, va="center")
         axes1[row, 0].set_xticks([])
         axes1[row, 0].set_yticks([])
 
         axes1[row, 1].imshow([[median_rgb]])
-        axes1[row, 1].set_title(f"Median\nH={med_h}  S={med_s}", fontsize=10)
+        axes1[row, 1].set_title(f"HSV Median\nH={med_h}  S={med_s}", fontsize=10)
         axes1[row, 1].axis("off")
 
         axes1[row, 2].imshow(median_hist.T, origin="lower", aspect="auto",
@@ -231,6 +263,17 @@ def plot_colour_references(ref_path: str | Path, dist_path: str | Path,
         axes1[row, 2].set_ylabel("Sat")
         if row == n - 1:
             axes1[row, 2].set_xlabel("Hue")
+
+        axes1[row, 3].imshow([[lab_rgb]])
+        axes1[row, 3].set_title(f"LAB Median\na={lab_a}  b={lab_b}", fontsize=10)
+        axes1[row, 3].axis("off")
+
+        axes1[row, 4].imshow(lab_median_hist.T, origin="lower", aspect="auto",
+                             extent=[0, 256, 0, 256], cmap="hot")
+        axes1[row, 4].set_title("Median LAB Histogram", fontsize=10)
+        axes1[row, 4].set_ylabel("b*")
+        if row == n - 1:
+            axes1[row, 4].set_xlabel("a*")
 
     fig1.tight_layout(rect=[0, 0, 1, 0.97])
     fig1_path = figures_dir / "colour_references_per_type.png"

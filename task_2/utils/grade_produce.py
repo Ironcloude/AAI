@@ -104,19 +104,24 @@ def grade_colour_generic(image_path: str | Path, distribution: dict,
             vibrancy_pct, uniformity_pct)
 
 def grade_colour(image_path: str | Path, fruit_type: str, references: dict,
-                 mask: np.ndarray | None = None) -> float:
+                 mask: np.ndarray | None = None,
+                 colour_space: str = "both") -> float:
     """Score colour against a healthy reference for the given fruit type.
 
-    Uses Bhattacharyya distance to compare
-    the input's HSV histogram against the reference.
+    Uses Bhattacharyya distance to compare the input histogram against the
+    reference. HSV captures hue identity; LAB's (a*, b*) plane is
+    perceptually uniform and more robust to illumination differences. By
+    default the two are fused (mean) to produce a single score.
 
     Args:
         image_path: Path to the produce image.
         fruit_type: Produce type name, possibly suffixed with health.
         references: Dict of reference histograms from
-                    `build_colour_references`.
+                    `build_colour_references`. Must contain "median" and,
+                    for LAB scoring, "lab_median".
         mask: Optional binary mask (0/1).
-        verbose: If True, print diagnostic details.
+        colour_space: "hsv", "lab", or "both" (default). "both" averages
+                    the two per-space scores.
 
     Returns:
         Colour score in [0, 100].
@@ -130,39 +135,37 @@ def grade_colour(image_path: str | Path, fruit_type: str, references: dict,
         img = cv2.resize(img, (int(w * scale), int(h * scale)))
 
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     if mask is None:
         mask = generate_produce_mask(str(image_path))
 
     # Ensure mask is the same size as compressed image
     mask = cv2.resize(mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
 
-    # Calculate frequency distribution of pixel values
-    # More bins; more precision.
-    histogram = cv2.calcHist(
-        [hsv],              # image
-        [0, 1],             # Channels for hue and saturation
-        mask,
-        [30, 32],           # bin counts (hue, saturation)
-        [0, 180, 0, 256]    # 0-180 (hue); 0-256 (saturation)
-    )
-    # Scale histogram to 1 (larger images don't dominate; proportional)
-    cv2.normalize(histogram, histogram)
-
-    # Compute raw hist comparison to average
     fruit_key = fruit_type.split("__")[0].strip() # replace __rotten with __healthy
     print(f"Looking for: '{fruit_key}'")
     print(f"Available: {list(references.keys())}")
-    reference_histogram = references[fruit_key]["median"]
-    dist = cv2.compareHist(
-        histogram, reference_histogram, 
-        cv2.HISTCMP_BHATTACHARYYA #More forgiving, measures overlap
-        # cv2.HISTCMP_CORREL # Strict, penalises minor variations
-    )
-    # CORREL returns -1 to 1, map to 0-100
-    # color_score = max(0, similarity) * 100
-    color_score = ((1 - dist))  * 100
 
-    return round(color_score, 1) 
+    def _score(image: np.ndarray, channels: list[int], bins: list[int],
+               ranges: list[int], ref_key: str) -> float:
+        hist = cv2.calcHist([image], channels, mask, bins, ranges)
+        cv2.normalize(hist, hist)
+        dist = cv2.compareHist(hist, references[fruit_key][ref_key],
+                               cv2.HISTCMP_BHATTACHARYYA)
+        return (1 - dist) * 100
+
+    hsv_score = _score(hsv, [0, 1], [30, 32], [0, 180, 0, 256], "median")
+    lab_score = _score(lab, [1, 2], [32, 32], [0, 256, 0, 256], "lab_median")
+    print(f"HSV score: {hsv_score:.1f} | LAB score: {lab_score:.1f}")
+
+    if colour_space == "hsv":
+        color_score = hsv_score
+    elif colour_space == "lab":
+        color_score = lab_score
+    else:
+        color_score = (hsv_score + lab_score) / 2
+
+    return round(color_score, 1)
 
 
 def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None
