@@ -214,7 +214,8 @@ test_screenshots/
 Fruit_And_Vegetable_Diseases_Dataset/
 "Fruit And Vegetable Diseases Dataset/"
 fruit-and-vegetable-disease-healthy-vs-rotten.zip
-
+task_1/data/groceries_dataset.csv
+task_1/data/insta_clean_data.csv
 # Additional datasets (large, not tracked)
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_dups/
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_dups_no_aug/
