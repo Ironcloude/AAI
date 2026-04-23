@@ -22,6 +22,8 @@ DATASETS = {
     "clean" : "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug", # deduplicated, no augmentation
 }
 
+# SEEDS = [45, 43, 44]  # For multiple runs per config to get variance estimates
+
 EXPERIMENTS = [
     # experiments.EX1_EFFICIENTNET_FINETUNE,
     # experiments.EX2_SWIN_FINETUNE,
@@ -37,9 +39,10 @@ EXPERIMENTS = [
     # experiments.EX6a_SWIN_FINETUNE_MTL,
     # experiments.EX6b_SWIN_FINETUNE_MTL,
     # experiments.EX6c_SWIN_FINETUNE_MTL
-    experiments.EX7a_SWIN_MTL_FREEZE,
-    experiments.EX7b_SWIN_MTL_SCRATCH,
-    experiments.EX7c_SWIN_MTL_UNWEIGHTED,
+    # experiments.EX7a_SWIN_MTL_FREEZE,
+    # experiments.EX7b_SWIN_MTL_SCRATCH,
+    # experiments.EX7c_SWIN_MTL_UNWEIGHTED,
+    experiments.EX8a_SWIN_FINETUNE_MTL_AUG
 ]
 
 def ensure_parameters_tag(notebook_path: Path) -> None:
@@ -65,21 +68,24 @@ def ensure_parameters_tag(notebook_path: Path) -> None:
 if __name__ == "__main__":
     ensure_parameters_tag(NOTEBOOK_IN)
 
-    runs = [(experiment, label, path) for experiment in EXPERIMENTS for label, path in DATASETS.items()]
+    runs = [(experiment, label, path, seed) for experiment in EXPERIMENTS for label, path in DATASETS.items() for seed in SEEDS]
+    if len(SEEDS) > 0:
+        print("\n",*runs, sep='\n')
+        input(f"\nAbout to run across {len(SEEDS)} non-42 seeds. Press Enter to confirm...")
     total = len(runs)
-    for i, (experiment, dataset_label, dataset_path) in enumerate(runs, start=1):
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        out = OUTPUT_DIR / f"{experiment.display_name}_{dataset_label}_{timestamp}.ipynb"
-        print(f"\n=== [{i}/{total}] {experiment.display_name} | dataset={dataset_label} -> {out} ===")
-        try:
-            pm.execute_notebook(
-                str(NOTEBOOK_IN),
-                str(out),
-                parameters={"RUN_ALL": experiment.display_name, "DATASET_PATH": dataset_path},
-                kernel_name="python3",
-                cwd=str(NOTEBOOK_IN.parent),
-                progress_bar=True,
-            )
-        except Exception as e:
-            print(f"!!! {experiment.display_name} | {dataset_label} failed: {e}")
-            continue
+    for i, (experiment, dataset_label, dataset_path, seed) in enumerate(runs, start=1):
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            out = OUTPUT_DIR / f"{experiment.display_name}_{dataset_label}_{timestamp}.ipynb"
+            print(f"\n=== [{i}/{total}] {experiment.display_name} | dataset={dataset_label} -> {out} ===")
+            try:
+                pm.execute_notebook(
+                    str(NOTEBOOK_IN),
+                    str(out),
+                    parameters={"RUN_ALL": experiment.display_name, "DATASET_PATH": dataset_path, "VARIABLE_SEED": seed},
+                    kernel_name="python3",
+                    cwd=str(NOTEBOOK_IN.parent),
+                    progress_bar=True,
+                )
+            except Exception as e:
+                print(f"!!! {experiment.display_name} | {dataset_label} failed: {e}")
+                continue
