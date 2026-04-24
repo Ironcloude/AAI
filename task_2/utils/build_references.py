@@ -16,8 +16,9 @@ from grade_produce import compute_colour_components
 def build_colour_references(dataset_root: str | Path, mask_root: str | Path = None,
                             example: bool = False, 
                             save_paths: list[str] = ["colour_reference.pkl",
-                                                     "generic_colour_distribution.pkl"]
-                            ) -> dict:
+                                                     "colour_reference.pkl",
+                                                     "generic_colour_distribution.pkl"],
+                            rotten: bool = False) -> dict:
     """Build per-fruit-type reference HSV and LAB histograms and colour
     disitributions from healthy training images.
 
@@ -44,15 +45,20 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
     mask_root = Path(mask_root) if mask_root else None
 
     if example:
-        healthy_directories = [dataset_root]
-    else:
-        healthy_directories = [
+        reference_directory = [dataset_root]
+    elif not rotten:
+        reference_directory = [
             directory for directory in dataset_root.iterdir()
             if directory.is_dir() and "healthy" in directory.name.lower()
-    ]
+        ]
+    else: 
+        reference_directory = [
+        directory for directory in dataset_root.iterdir()
+        if directory.is_dir() and "rotten" in directory.name.lower()
+        ]
     produce_classes = {}
     # For each healthy produce image, find its corresponding mask
-    for produce_directory in healthy_directories:
+    for produce_directory in reference_directory:
         cls_vibrancy, cls_brightness, cls_uniformity = [], [], []
         fruit_type = produce_directory.name.split("__")[0].strip().lower()
         histograms = []
@@ -108,22 +114,11 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
             # Scale histogram to 1 (larger images don't dominate; proportional)
             cv2.normalize(hist, hist)
 
-            # LAB histogram over chromatic channels (a*, b*); L* dropped so the
-            # reference is illumination-invariant.
-            lab_hist = cv2.calcHist(
-                images=[lab_produce_image],
-                channels=[1, 2],          # a* and b*
-                mask=mask,
-                histSize=[32, 32],
-                ranges=[0, 256, 0, 256],  # OpenCV 8-bit LAB: a,b in [0,255]
-            )
-            cv2.normalize(lab_hist, lab_hist)
-
             # Skip if dominant colour (max loc) is very low saturation
             # Likely faulty mask isolating background
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(hist)
             # remove saturation bin < 5 out of 32 == 16% of lower end
-            if max_loc[0] < 5:
+            if not rotten and max_loc[0] < 5:
                 drop_count += 1
                 continue
 
@@ -134,18 +129,14 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
             cls_uniformity.append(uniformity)
 
             histograms.append(hist)
-            lab_histograms.append(lab_hist)
-            
+
         print(f"{produce_directory.name}: {len(cls_vibrancy)} samples, {drop_count} dropped")
         
         if histograms:
             stacked = np.array(histograms) # stack all histograms for mean/media ops
-            lab_stacked = np.array(lab_histograms)
             references[fruit_type] = {
                 "mean": np.mean(stacked, axis=0).astype(np.float32),
                 "median": np.median(stacked, axis=0).astype(np.float32),
-                "lab_mean": np.mean(lab_stacked, axis=0).astype(np.float32),
-                "lab_median": np.median(lab_stacked, axis=0).astype(np.float32),
             }
 
         produce_classes[fruit_type] = {"vibrancy": cls_vibrancy, "brightness": cls_brightness, "uniformity": cls_uniformity}
@@ -358,19 +349,141 @@ def plot_colour_references(ref_path: str | Path, dist_path: str | Path,
     fig2.write_html(str(fig2_html_path))
     print(f"Saved {fig2_html_path}")
 
-    plt.show()
-    fig2.show()
+    # Figures are already saved to disk above; skip interactive display when
+    # running headless (otherwise plt.show() blocks the pipeline).
+    # plt.show()
+    # fig2.show()
+
+
+def plot_healthy_vs_rotten_references(healthy_ref_path: str | Path,
+                                      rotten_ref_path: str | Path,
+                                      figures_dir: str | Path | None = None) -> None:
+    """Compare per-type healthy vs rotten HSV references side by side.
+
+    For each produce type present in both reference pickles, renders a row
+    with: healthy median swatch, healthy HSV histogram, rotten median swatch,
+    rotten HSV histogram. Types missing from either side are skipped.
+
+    Args:
+        healthy_ref_path: Path to healthy references pickle.
+        rotten_ref_path:  Path to rotten references pickle.
+        figures_dir: Optional output directory. Defaults to ../figures.
+    """
+    with open(healthy_ref_path, "rb") as f:
+        healthy_refs = pickle.load(f)
+    with open(rotten_ref_path, "rb") as f:
+        rotten_refs = pickle.load(f)
+
+    if figures_dir is None:
+        figures_dir = Path(__file__).resolve().parent.parent / "figures"
+    figures_dir = Path(figures_dir)
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    # Shared types only — need both sides to compare
+    shared = sorted(set(healthy_refs.keys()) & set(rotten_refs.keys()))
+    if not shared:
+        print("No shared fruit types between healthy and rotten references")
+        return
+
+    def dominant_rgb(hist):
+        _, _, _, max_loc = cv2.minMaxLoc(hist.astype(np.float32))
+        hue = int(max_loc[1] * 6 + 3)
+        sat = int(max_loc[0] * 8 + 4)
+        return cv2.cvtColor(np.uint8([[[hue, sat, 220]]]),
+                            cv2.COLOR_HSV2RGB)[0][0] / 255.0, hue, sat
+
+    n = len(shared)
+    fig, axes = plt.subplots(n, 4, figsize=(14, 2.8 * n), squeeze=False)
+    fig.suptitle("Healthy vs Rotten Colour References (per fruit type)",
+                 fontsize=15)
+
+    for row, fruit_type in enumerate(shared):
+        h_med = healthy_refs[fruit_type]["median"]
+        r_med = rotten_refs[fruit_type]["median"]
+
+        h_rgb, h_h, h_s = dominant_rgb(h_med)
+        r_rgb, r_h, r_s = dominant_rgb(r_med)
+
+        axes[row, 0].imshow([[h_rgb]])
+        axes[row, 0].set_title(f"Healthy swatch\nH={h_h}  S={h_s}", fontsize=10)
+        axes[row, 0].set_ylabel(fruit_type, fontsize=11, fontweight="bold",
+                                 rotation=0, labelpad=45, va="center")
+        axes[row, 0].set_xticks([]); axes[row, 0].set_yticks([])
+
+        axes[row, 1].imshow(h_med.T, origin="lower", aspect="auto",
+                            extent=[0, 180, 0, 256], cmap="hot")
+        axes[row, 1].set_title("Healthy HSV hist", fontsize=10)
+        axes[row, 1].set_ylabel("Sat")
+        if row == n - 1:
+            axes[row, 1].set_xlabel("Hue")
+
+        axes[row, 2].imshow([[r_rgb]])
+        axes[row, 2].set_title(f"Rotten swatch\nH={r_h}  S={r_s}", fontsize=10)
+        axes[row, 2].axis("off")
+
+        axes[row, 3].imshow(r_med.T, origin="lower", aspect="auto",
+                            extent=[0, 180, 0, 256], cmap="hot")
+        axes[row, 3].set_title("Rotten HSV hist", fontsize=10)
+        axes[row, 3].set_ylabel("Sat")
+        if row == n - 1:
+            axes[row, 3].set_xlabel("Hue")
+
+    # Report any types missing from one side — interesting to note in writeup
+    only_healthy = sorted(set(healthy_refs.keys()) - set(rotten_refs.keys()))
+    only_rotten  = sorted(set(rotten_refs.keys()) - set(healthy_refs.keys()))
+    if only_healthy:
+        print(f"Types only in healthy (skipped): {only_healthy}")
+    if only_rotten:
+        print(f"Types only in rotten (skipped):  {only_rotten}")
+
+    fig.tight_layout(rect=[0, 0, 1, 0.98])
+    out_path = figures_dir / "healthy_vs_rotten_references.png"
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    print(f"Saved {out_path}")
+
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rotten", action="store_true")
+    parser.add_argument("--compare", action="store_true",
+                        help="Skip build; just plot healthy vs rotten comparison")
+    args = parser.parse_args()
+
     util_dir = Path(__file__).resolve().parent
     dataset_dir = util_dir.parent / "data" / "Fruit_And_Vegetable_Diseases_Dataset"
     mask_dir = util_dir.parent / "data" / "rembg_masks"
-    ref_path = util_dir.parent / "data" / "colour_references_rembg.pkl"
+    healthy_ref_path = util_dir.parent / "data" / "colour_references_rembg.pkl"
+    rotten_ref_path  = util_dir.parent / "data" / "colour_references_rembg_rotten.pkl"
     dist_path = util_dir.parent / "data" / "generic_colour_distribution.pkl"
 
-    # Build and save references
-    print("Building colour references...")
-    build_colour_references(dataset_dir, mask_root=mask_dir, save_paths=[str(ref_path), str(dist_path)])
+    if args.compare:
+        plot_healthy_vs_rotten_references(str(healthy_ref_path), str(rotten_ref_path))
+    elif args.rotten:
+        print("Building rotten colour references...")
+        build_colour_references(dataset_dir, mask_root=mask_dir,
+                                save_paths=[str(rotten_ref_path), "/tmp/dist_rotten_unused.pkl"],
+                                rotten=True)
+    else:
+        print("Building healthy colour references...")
+        build_colour_references(dataset_dir, mask_root=mask_dir,
+                                save_paths=[str(healthy_ref_path), str(dist_path)], rotten=False)
+        plot_colour_references(str(healthy_ref_path), str(dist_path))
 
-    # Visualise from saved pickle
-    plot_colour_references(str(ref_path), str(dist_path))
+    TESTS
+    import cv2
+    from pathlib import Path
+    import random
+
+    rotten_dir = Path(".") / "data" / "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug" / "Cucumber__Rotten"
+    samples = random.sample(list(rotten_dir.iterdir()), 10)
+
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(2, 5, figsize=(15, 6))
+    for ax, p in zip(axes.flat, samples):
+        img = cv2.imread(str(p))
+        ax.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        ax.set_title(p.name[:20], fontsize=7)
+        ax.axis("off")
+    plt.tight_layout()
+    plt.show()

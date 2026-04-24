@@ -10,6 +10,91 @@ try:
 except ModuleNotFoundError:
     from generate_masks import generate_produce_mask
 
+    
+def grade_colour_dual(image_path, fruit_type,
+                     healthy_refs, rotten_refs,
+                     mask=None, verbose=True, gamma=0 ) -> float | None:
+    img = cv2.imread(str(image_path))
+    max_dim = 512
+    h, w = img.shape[:2]
+    if max(h, w) > max_dim:
+        scale = max_dim / max(h, w)
+        img = cv2.resize(img, (int(w * scale), int(h * scale)))
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    if mask is None:
+        mask = generate_produce_mask(str(image_path))
+    mask = cv2.resize(mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
+    if mask.dtype != np.uint8:
+        mask = mask.astype(np.uint8)
+
+    fruit_key = fruit_type.split("__")[0].strip()
+    if fruit_key not in healthy_refs or fruit_key not in rotten_refs:
+        if verbose:
+            print(f"'{fruit_key}' missing from one of the references, returning None")
+        return None
+
+    hist = cv2.calcHist([hsv], [0, 1], mask, [30, 32], [0, 180, 0, 256]).astype(np.float32)
+    hist /= (hist.sum() + 1e-8)
+
+    def _norm(ref):
+        ref = ref.astype(np.float32)
+        return ref / (ref.sum() + 1e-8)
+
+    h_ref = _norm(healthy_refs[fruit_key]["median"])
+    r_ref = _norm(rotten_refs[fruit_key]["median"])
+    distance_healthy = cv2.compareHist(hist, h_ref, cv2.HISTCMP_BHATTACHARYYA)
+    distance_rotten = cv2.compareHist(hist, r_ref, cv2.HISTCMP_BHATTACHARYYA)
+    if distance_healthy + distance_rotten == 0: # Division by zero gaurd
+        return None
+    
+    # for plot display
+    summary_lines = [f"d_H:{distance_healthy:.3f} | d_R:{distance_rotten:.3f}"]
+    
+    if verbose:
+        print("\n" + "="*50)
+        print(f"DUAL COLOUR GRADING: {fruit_key.upper()}")
+        print("-" * 50)
+        print("1. Raw Bhattacharyya Distances (Lower is better):")
+        print(f"{'d_healthy':<10} = {distance_healthy:.4f}")
+        print(f"{'d_rotten':<10} = {distance_rotten:.4f}")
+
+    if gamma:
+        weight_healthy = np.exp(-gamma * distance_healthy)
+        weight_rotten = np.exp(-gamma * distance_rotten)
+        
+        score = (weight_healthy / (weight_healthy + weight_rotten)) * 100
+        score_ref = (distance_rotten / (distance_healthy + distance_rotten)) * 100
+
+        summary_lines.append(f"w_H:{weight_healthy:.3f} | w_R:{weight_rotten:.3f} (g={gamma})")
+        summary_lines.append(f"Score:{score:.1f}% (Raw:{score_ref:.1f}%)")
+        
+        if verbose:
+            print(f"\n2. Exponential Weighting (gamma = {gamma}):")
+            print(f"{'Formula:':<10} w = exp(-gamma * distance)")
+            print(f"{'w_healthy':<10} = exp(-{gamma:<4} * {distance_healthy:.4f}) = {weight_healthy:.4f}")
+            print(f"{'w_rotten':<10} = exp(-{gamma:<4} * {distance_rotten:.4f}) = {weight_rotten:.4f}")
+            print(f"\n3. Final Score Calculation (Healthy Weight Ratio):")
+            print(f"{'Formula:':<10} (w_healthy / (w_healthy + w_rotten)) * 100")
+            print(f"{'':<10} ({weight_healthy:.4f} / ({weight_healthy:.4f} + {weight_rotten:.4f})) * 100")
+            print(f"{'':<10} ({weight_healthy:.4f} / {(weight_healthy + weight_rotten):.4f}) * 100")
+            print(f"-"*20)
+            print(f"FINAL COLOUR GRADE: {score:.1f}% (Unweighted: {score_ref:1f} )")
+
+    else:
+        score = (distance_rotten / (distance_healthy + distance_rotten)) * 100 
+        summary_lines.append(f"Score:{score:.1f}%")
+        if verbose:
+            print("\n2. Final Score Calculation (Raw Distance Ratio):")
+            print(f"{'Formula:':<10} (d_rotten / (d_healthy + d_rotten)) * 100")
+            print(f"{'':<10} ({distance_rotten:.4f} / ({distance_healthy:.4f} + {distance_rotten:.4f})) * 100")
+            print(f"{'':<10} ({distance_rotten:.4f} / {(distance_healthy + distance_rotten):.4f}) * 100")
+            print(f"FINAL COLOUR GRADE: {score:.1f}%")
+    if verbose:
+        print("="*50 + "\n")    
+    summary_str = "\n".join(summary_lines)
+    return round(score, 1), summary_str
+
 
 def compute_colour_components(fruit_pixels: np.ndarray
                               ) -> tuple[float, float, float]:
@@ -91,21 +176,18 @@ def grade_colour_generic(image_path: str | Path, distribution: dict,
     if len(fruit_pixels) == 0:
         return 0.0, 0.0, 0.0
 
-    vibrancy, _, uniformity = compute_colour_components(fruit_pixels)
-    print(f"RAW - Vib: {vibrancy:.2f}, Uni: {uniformity:.2f}")
+    vibrancy, _, _ = compute_colour_components(fruit_pixels)
     vibrancy_pct = _percentile_score(vibrancy, distribution["vibrancy"])
-    uniformity_pct = _percentile_score(uniformity, distribution["uniformity"])
 
     # Brightness excluded: HSV value is dominated by capture-time exposure
     # rather than intrinsic produce quality.
-    colour_score = (vibrancy_pct + uniformity_pct) / 2 * 100
+    colour_score = vibrancy_pct * 100
 
     return (round(max(0, min(100, colour_score)), 1),
-            vibrancy_pct, uniformity_pct)
+            vibrancy_pct)
 
 def grade_colour(image_path: str | Path, fruit_type: str, references: dict,
-                 mask: np.ndarray | None = None,
-                 colour_space: str = "both") -> float:
+                 mask: np.ndarray | None = None) -> float:
     """Score colour against a healthy reference for the given fruit type.
 
     Uses Bhattacharyya distance to compare the input histogram against the
@@ -139,33 +221,30 @@ def grade_colour(image_path: str | Path, fruit_type: str, references: dict,
     if mask is None:
         mask = generate_produce_mask(str(image_path))
 
+    if mask.dtype != np.uint8:
+        mask = mask.astype(np.uint8)
     # Ensure mask is the same size as compressed image
     mask = cv2.resize(mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
 
-    fruit_key = fruit_type.split("__")[0].strip() # replace __rotten with __healthy
+    fruit_key = fruit_type.split("__")[0].strip()
+    if fruit_key not in references:
+        print(f"'{fruit_key}' not in references {list(references.keys())[:5]}... — returning None")
+        return None
     print(f"Looking for: '{fruit_key}'")
-    print(f"Available: {list(references.keys())}")
 
     def _score(image: np.ndarray, channels: list[int], bins: list[int],
                ranges: list[int], ref_key: str) -> float:
-        hist = cv2.calcHist([image], channels, mask, bins, ranges)
-        cv2.normalize(hist, hist)
-        dist = cv2.compareHist(hist, references[fruit_key][ref_key],
-                               cv2.HISTCMP_BHATTACHARYYA)
+        hist = cv2.calcHist([image], channels, mask, bins, ranges).astype(np.float32)
+        hist /= (hist.sum() + 1e-8)                           # L1 normalise to proper prob. dist.
+        ref = references[fruit_key][ref_key].astype(np.float32)
+        ref = ref / (ref.sum() + 1e-8)                         # Reference normalised identically
+        assert hist.shape == ref.shape, f"hist shape mismatch: {hist.shape} vs {ref.shape}"
+        dist = cv2.compareHist(hist, ref, cv2.HISTCMP_BHATTACHARYYA)
         return (1 - dist) * 100
 
-    hsv_score = _score(hsv, [0, 1], [30, 32], [0, 180, 0, 256], "median")
-    lab_score = _score(lab, [1, 2], [32, 32], [0, 256, 0, 256], "lab_median")
-    print(f"HSV score: {hsv_score:.1f} | LAB score: {lab_score:.1f}")
+    colour_score = _score(hsv, [0, 1], [30, 32], [0, 180, 0, 256], "median")
 
-    if colour_space == "hsv":
-        color_score = hsv_score
-    elif colour_space == "lab":
-        color_score = lab_score
-    else:
-        color_score = (hsv_score + lab_score) / 2
-
-    return round(color_score, 1)
+    return round(colour_score, 1)
 
 
 def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None

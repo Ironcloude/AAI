@@ -4,6 +4,8 @@ Define experiments configurations.
 Dataclasses used for intellisense.
 """
 import sys
+
+from torchvision.transforms import v2 as T
 sys.path.append(".")
 from .schema import Experiment, Training, assign_display_names
 
@@ -132,11 +134,30 @@ EX7c_SWIN_MTL_UNWEIGHTED = Experiment(
 )
 
 # Augmentation 
+EX8_SWIN_FINETUNE_MTL_AUG = Experiment(
+    architecture="swin_s",
+    training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
+    primary_task_weight=0.9,
+    augment = T.Compose([
+                T.RandomHorizontalFlip(p=0.5), 
+                T.RandomApply([T.GaussianBlur(3, sigma=(0.1, 1.0))], p=0.25),
+                T.RandAugment(num_ops=1, magnitude=1),
+                T.RandomErasing(p=0.25)
+            ])
+)
+
+# Simple aug
 EX8a_SWIN_FINETUNE_MTL_AUG = Experiment(
     architecture="swin_s",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
     primary_task_weight=0.9,
-    aug_magnitude=1
+    augment = T.Compose([
+            T.RandomHorizontalFlip(), 
+            T.RandomVerticalFlip(), 
+            # T.RandAugment(num_ops=1, magnitude=7),
+        ])
 )
+
+
 
 assign_display_names(sys.modules[__name__])
