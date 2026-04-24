@@ -1,7 +1,7 @@
 import os
 
 import requests
-from flask import Flask, jsonify, request, render_template, Response
+from flask import Flask, Response, jsonify, render_template, request
 
 
 app = Flask(__name__)
@@ -22,7 +22,7 @@ def index():
 
 
 def _relay(resp: requests.Response):
-    """Return upstream response as-is (JSON or text) without crashing on non-JSON bodies."""
+    """Return upstream response as-is without crashing on non-JSON bodies."""
     ctype = resp.headers.get("Content-Type", "")
     if "application/json" in ctype:
         try:
@@ -30,7 +30,9 @@ def _relay(resp: requests.Response):
         except Exception:
             # Malformed JSON; fall back to raw text
             pass
-    return Response(resp.content, status=resp.status_code, mimetype=ctype or "text/plain")
+    return Response(
+        resp.content, status=resp.status_code, mimetype=ctype or "text/plain"
+    )
 
 
 @app.get("/ai/health")
@@ -42,64 +44,84 @@ def ai_health():
 
 @app.get("/models")
 def models():
+    """Proxy to AI service models list."""
     response = requests.get(f"{AI_SERVICE_URL}/models", timeout=TIMEOUT)
     return _relay(response)
 
 
 @app.post("/models/upload")
 def upload_model():
+    """Proxy model upload to the AI service."""
     model_file = request.files.get("model")
     if not model_file:
         return jsonify({"error": "Missing model file under form field 'model'"}), 400
 
     files = {
-        "model": (model_file.filename, model_file.stream, model_file.mimetype or "application/octet-stream"),
+        "model": (
+            model_file.filename,
+            model_file.stream,
+            model_file.mimetype or "application/octet-stream",
+        ),
     }
     data = {
         "task_type": request.form.get("task_type", "tabular"),
         "display_name": request.form.get("display_name", model_file.filename),
     }
     response = requests.post(
-        f"{AI_SERVICE_URL}/models/upload", files=files, data=data, timeout=TIMEOUT)
+        f"{AI_SERVICE_URL}/models/upload",
+        files=files, data=data, timeout=TIMEOUT
+    )
     return _relay(response)
 
 
 @app.post("/models/select")
 def select_model():
+    """Proxy model selection to the AI service."""
     payload = request.get_json() or {}
     print(f"\033[43m\033[30m{payload=}\033[0m")
     response = requests.post(
-        f"{AI_SERVICE_URL}/models/select", json=payload, timeout=TIMEOUT)
+        f"{AI_SERVICE_URL}/models/select", json=payload, timeout=TIMEOUT
+    )
     print(f"\033[43m\033[30m{response=}\033[0m")
     return _relay(response)
 
 
 @app.post("/predict/tabular")
 def predict_tabular():
+    """Proxy tabular prediction to the AI service."""
     payload = request.get_json(silent=True) or {}
     response = requests.post(
-        f"{AI_SERVICE_URL}/predict/tabular", json=payload, timeout=TIMEOUT)
+        f"{AI_SERVICE_URL}/predict/tabular", json=payload, timeout=TIMEOUT
+    )
     return _relay(response)
 
 
 @app.post("/predict/image")
 def predict_image():
+    """Proxy image prediction to the AI service."""
     image_file = request.files.get("image")
     if not image_file:
         return jsonify({"error": "Missing image file under form field 'image'"}), 400
 
     files = {
-        "image": (image_file.filename, image_file.stream, image_file.mimetype or "application/octet-stream"),
+        "image": (
+            image_file.filename,
+            image_file.stream,
+            image_file.mimetype or "application/octet-stream",
+        ),
     }
     response = requests.post(
-        f"{AI_SERVICE_URL}/predict/image", files=files, timeout=TIMEOUT)
+        f"{AI_SERVICE_URL}/predict/image", files=files, timeout=TIMEOUT
+    )
     return _relay(response)
 
 
 @app.get("/xai/active-model")
 def active_model_xai():
+    """Proxy XAI explanation request to the AI service."""
     response = requests.get(
-        f"{AI_SERVICE_URL}/xai/active-model", timeout=TIMEOUT)
+        f"{AI_SERVICE_URL}/xai/active-model", timeout=TIMEOUT
+    )
     return _relay(response)
 
 
