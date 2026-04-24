@@ -141,8 +141,8 @@ def generate_produce_mask(data_path: str | Path | None = None,
         if not class_dir.is_dir():
             continue
         # Skip rotten samples
-        if "healthy" not in class_dir.name.lower():
-            continue
+        # if "healthy" not in class_dir.name.lower():
+            # continue
 
         mask_class_dir = output_dir / class_dir.name
         mask_class_dir.mkdir(parents=True, exist_ok=True)
@@ -184,6 +184,6 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
 
     script_dir = Path(__file__).resolve().parent
-    dataset_dir = script_dir.parent / "data" / "Fruit_And_Vegetable_Diseases_Dataset"
+    dataset_dir = script_dir.parent / "data" / "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug"
     method = "rembg"
     generate_produce_mask(data_path=dataset_dir, method=method)

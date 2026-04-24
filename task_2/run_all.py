@@ -22,7 +22,7 @@ DATASETS = {
     "clean" : "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug", # deduplicated, no augmentation
 }
 
-SEEDS = [43]  # For multiple runs per config to get variance estimates
+SEEDS = [42]  # For multiple runs per config to get variance estimates
 
 EXPERIMENTS = [
     # experiments.EX1_EFFICIENTNET_FINETUNE,

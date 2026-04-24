@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Any, Optional
 
 
 def assign_display_names(module) -> None:
@@ -24,7 +25,7 @@ class Experiment:
     optimizer: str = "adamw"
     primary_task_weight: float = 1.0
     display_name: str = field(init=False, default="")
-    aug_magnitude: int = 0
+    augment: Optional[Any] = None   # torchvision v2 Compose / Transform, applied on GPU
     batch_size: int = 16
     acc_steps: int = 2
     pretrained: bool = True       # False = random init (skip torchvision weight load)

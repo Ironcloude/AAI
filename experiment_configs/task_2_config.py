@@ -5,6 +5,7 @@ Dataclasses used for intellisense.
 """
 import sys
 sys.path.append(".")
+from torchvision.transforms import v2 as T
 from .schema import Experiment, Training, assign_display_names
 
 # EXPERIMENTS
@@ -93,21 +94,36 @@ EX9_MAXVIT_FINETUNE_MTL = Experiment(
 EX10_EFFICIENTNET_FINETUNE_AUG = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    aug_magnitude = 7
+    augment = T.Compose([
+        T.RandomHorizontalFlip(),
+        T.RandomVerticalFlip(),
+        T.RandAugment(num_ops=1, magnitude=7),
+            ])
 )
+
 
 # EX-11 - MTL finetuned efficientnet_v2_s aug 10
 EX11_EFFICIENTNET_FINETUNE_AUG = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    aug_magnitude = 10
+    augment = T.Compose([
+        T.RandomHorizontalFlip(),
+        T.RandomVerticalFlip(),
+        T.RandAugment(num_ops=1, magnitude=10),
+            ])
 )
+
 
 # EX-12 - MTL finetuned efficientnet_v2_s aug 13
 EX12_EFFICIENTNET_FINETUNE_AUG = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    aug_magnitude = 13
+    augment = T.Compose([
+        T.RandomHorizontalFlip(),
+        T.RandomVerticalFlip(),
+        T.RandAugment(num_ops=1, magnitude=13),
+            ])
 )
+
 
 assign_display_names(sys.modules[__name__])
