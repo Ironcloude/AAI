@@ -15,19 +15,33 @@ from config import get_run_config, ForecastingMetrics
 import run_utils
 
 
-def prepare_true_timeseries(filepath='groceries_dataset.csv', target_product='whole milk', freq='D'):
+def prepare_true_timeseries(filepath='groceries_dataset.csv', freq='D'):
+    """
+    Builds a TRUE chronological time-series from raw timestamp data.
+    By default, calculates total daily grocery demand. If freq='W', 
+    calculates total weekly grocery demand to reduce noise.
+    """
     df = pd.read_csv(filepath)
-    df_product = df[df['itemDescription'] == target_product].copy()
-    df_product['Date'] = pd.to_datetime(df_product['Date'], format='%d-%m-%Y')
+    
+    # Convert to datetime and sort chronologically
+    df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y')
+    df = df.sort_values(by='Date')
 
-    daily_demand = df_product.groupby('Date').size().reset_index(name='demand')
-    daily_demand.set_index('Date', inplace=True)
+    # Handle aggregation based on frequency config (Daily vs Weekly)
+    if freq == 'W':
+        aggregated_demand = df.groupby(pd.Grouper(key='Date', freq='W')).size().reset_index(name='demand')
+    else:
+        # Default Daily aggregation
+        aggregated_demand = df.groupby('Date').size().reset_index(name='demand')
+        
+    aggregated_demand.set_index('Date', inplace=True)
 
+    # Reindex missing dates/weeks with zero demand to maintain strict chronology
     full_date_range = pd.date_range(
-        start=daily_demand.index.min(), end=daily_demand.index.max(), freq=freq)
-    daily_demand = daily_demand.reindex(full_date_range, fill_value=0)
+        start=aggregated_demand.index.min(), end=aggregated_demand.index.max(), freq=freq)
+    aggregated_demand = aggregated_demand.reindex(full_date_range, fill_value=0)
 
-    return daily_demand['demand'].values.astype(float), daily_demand.index
+    return aggregated_demand['demand'].values.astype(float), aggregated_demand.index
 
 
 def create_lstm_sequences(data, lookback):

@@ -66,7 +66,8 @@ A1 = ForecastingLSTMConfig(run="A1", hidden_size=64, num_layers=1, lookback_wind
 A2 = ForecastingLSTMConfig(run="A2", hidden_size=128, num_layers=2, lookback_window=21, epochs=50)
 
 # B-Series: Forecasting SARIMAX Runs (Forecasting + SARIMAX)
-B1 = ForecastingSARIMAXConfig(run="B1", order=(1, 0, 1), seasonal_order=(1, 0, 1, 7))
+# B1 = ForecastingSARIMAXConfig(run="B1", order=(1, 0, 1), seasonal_order=(1, 0, 1, 7))
+B1 = ForecastingSARIMAXConfig(run="B1", order=(1, 1, 0), seasonal_order=(0, 1, 1, 7))
 B2 = ForecastingSARIMAXConfig(run="B2", order=(2, 1, 2), seasonal_order=(1, 1, 1, 7))
 
 # C-Series: Recommender LSTM Runs (Recommender + LSTM)
