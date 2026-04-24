@@ -17,12 +17,12 @@ DATASETS={
 SEEDS=[43]
 
 EXPERIMENTS=[
-    #experiments.ncf_baseline,
-    #experiments.ncf_deep,
-    #experiments.lstm_baseline,
-    #experiments.lstm_long_context,
-    experiments.sasrec_baseline
-    #experiments.sasrec_heavy
+    experiments.ncf_baseline,
+    experiments.ncf_deep,
+    experiments.lstm_baseline,
+    experiments.lstm_long_context,
+    experiments.sasrec_baseline,
+    experiments.sasrec_heavy
 ]
 
 def ensure_parameters_tag(notebook_path: Path) -> None:
