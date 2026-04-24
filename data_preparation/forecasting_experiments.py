@@ -22,24 +22,27 @@ def prepare_true_timeseries(filepath='groceries_dataset.csv', freq='D'):
     calculates total weekly grocery demand to reduce noise.
     """
     df = pd.read_csv(filepath)
-    
+
     # Convert to datetime and sort chronologically
     df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y')
     df = df.sort_values(by='Date')
 
-    # Handle aggregation based on frequency config (Daily vs Weekly)
-    if freq == 'W':
-        aggregated_demand = df.groupby(pd.Grouper(key='Date', freq='W')).size().reset_index(name='demand')
+    # Handle aggregation based on frequency config
+    if freq in ['W', 'ME', 'M']:
+        aggregated_demand = df.groupby(pd.Grouper(
+            key='Date', freq=freq)).size().reset_index(name='demand')
     else:
         # Default Daily aggregation
-        aggregated_demand = df.groupby('Date').size().reset_index(name='demand')
-        
+        aggregated_demand = df.groupby(
+            'Date').size().reset_index(name='demand')
+
     aggregated_demand.set_index('Date', inplace=True)
 
     # Reindex missing dates/weeks with zero demand to maintain strict chronology
     full_date_range = pd.date_range(
         start=aggregated_demand.index.min(), end=aggregated_demand.index.max(), freq=freq)
-    aggregated_demand = aggregated_demand.reindex(full_date_range, fill_value=0)
+    aggregated_demand = aggregated_demand.reindex(
+        full_date_range, fill_value=0)
 
     return aggregated_demand['demand'].values.astype(float), aggregated_demand.index
 
@@ -78,13 +81,16 @@ def run_sarimax(run_id="B1", output_dir="forecasting_results"):
     print(f"\n--- Starting SARIMAX Run: {run_config.run} ---")
     start_time = time.time()
 
-    data, dates = prepare_true_timeseries()
+    # Reason: monthly ACF/PACF is cleaner than weekly -> better forecasting signal
+    data, dates = prepare_true_timeseries(
+        freq=getattr(run_config, 'freq', 'D'))
     train_size = int(len(data) * 0.8)
     train_data, test_data = data[:train_size], data[train_size:]
 
     model = SARIMAX(train_data, order=run_config.order, seasonal_order=run_config.seasonal_order,
                     enforce_stationarity=False, enforce_invertibility=False)
-    fitted_model = model.fit(disp=False)
+    # Increase maxiter to help B2 converge on noisy daily data
+    fitted_model = model.fit(disp=False, maxiter=200)
 
     os.makedirs(output_dir, exist_ok=True)
     # NOTE: SARIMAX relies on statsmodels objects; cannot use .safetensors
@@ -103,8 +109,9 @@ def run_sarimax(run_id="B1", output_dir="forecasting_results"):
     run_utils.save_run_data(run_config, metrics, output_dir)
 
     test_dates = dates[train_size:]
+    # Update future_dates to use the appropriate frequency (monthly, weekly, daily)
     future_dates = pd.date_range(
-        start=dates[-1] + pd.Timedelta(days=1), periods=run_config.future_steps, freq='D')
+        start=dates[-1], periods=run_config.future_steps + 1, freq=getattr(run_config, 'freq', 'D'))[1:]
     run_utils.plot_forecasting_dashboard(
         run_config, dates, data, test_dates, test_preds, future_dates, future_preds, metrics, output_dir)
 
@@ -117,7 +124,9 @@ def run_forecasting_lstm(run_id="A1", output_dir="forecasting_results"):
     print(f"\n--- Starting Forecasting LSTM Run: {run_config.run} ---")
     start_time = time.time()
 
-    data, dates = prepare_true_timeseries()
+    # Reason: monthly ACF/PACF is cleaner than weekly -> better forecasting signal
+    data, dates = prepare_true_timeseries(
+        freq=getattr(run_config, 'freq', 'D'))
     train_size = int(len(data) * 0.8)
     train_data, test_data = data[:train_size], data[train_size:]
 
@@ -131,6 +140,10 @@ def run_forecasting_lstm(run_id="A1", output_dir="forecasting_results"):
     X_test, y_test = create_lstm_sequences(
         test_scaled, run_config.lookback_window)
 
+    if len(X_train) == 0 or len(X_test) == 0:
+        print(f"Error: Not enough data for lookback_window={run_config.lookback_window} at freq={getattr(run_config, 'freq', 'D')}")
+        return
+
     X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
     X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
 
@@ -142,7 +155,14 @@ def run_forecasting_lstm(run_id="A1", output_dir="forecasting_results"):
     model = TimeSeriesLSTM(hidden_size=run_config.hidden_size,
                            num_layers=run_config.num_layers).to(device)
     optimizer = optim.Adam(model.parameters(), lr=run_config.learning_rate)
-    criterion = nn.MSELoss()
+
+    loss_type = getattr(run_config, 'loss_type', 'MSE')
+    if loss_type == "Huber":
+        criterion = nn.HuberLoss()
+    elif loss_type == "MAE":
+        criterion = nn.L1Loss()
+    else:
+        criterion = nn.MSELoss()
 
     metrics = ForecastingMetrics(run=f"{run_config.run}_metrics")
 
@@ -197,12 +217,20 @@ def run_forecasting_lstm(run_id="A1", output_dir="forecasting_results"):
 
     test_dates = dates[train_size + run_config.lookback_window:]
     future_dates = pd.date_range(
-        start=dates[-1] + pd.Timedelta(days=1), periods=run_config.future_steps, freq='D')
+        start=dates[-1], periods=run_config.future_steps + 1, freq=getattr(run_config, 'freq', 'D'))[1:]
     run_utils.plot_forecasting_dashboard(
         run_config, dates, data, test_dates, predictions, future_dates, future_forecast, metrics, output_dir)
 
 
 if __name__ == '__main__':
+    # 1-2 Daily Runs (Baseline)
+    # 3-4 Monthly Runs (Optimized Seasonality)
+    run_forecasting_lstm("A1")
     run_forecasting_lstm("A2")
-    run_sarimax("B2")
+    run_forecasting_lstm("A3")
+    run_forecasting_lstm("A4")
 
+    run_sarimax("B1")
+    run_sarimax("B2")
+    run_sarimax("B3")
+    run_sarimax("B4")

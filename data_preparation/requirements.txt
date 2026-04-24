@@ -7,3 +7,4 @@ kaleido
 torch
 safetensors
 dash
+xgboost

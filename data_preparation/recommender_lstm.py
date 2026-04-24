@@ -81,7 +81,7 @@ class RecommendationLSTM(nn.Module):
         return self.fc2(out)
 
 
-def train_recommender(run_id="C1", output_dir="recommender_results"):
+def train_recommender(run_id="E1", output_dir="recommender_results"):
     run_config = get_run_config(run_id)
     if not run_config:
         print(f"Run config {run_id} not found.")
@@ -165,5 +165,5 @@ def train_recommender(run_id="C1", output_dir="recommender_results"):
 
 
 if __name__ == '__main__':
-    train_recommender("C1")
+    train_recommender("E1")
 
