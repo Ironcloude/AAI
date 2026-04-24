@@ -1,0 +1,25 @@
+{
+    "config": {
+        "run": "B1",
+        "order": [
+            1,
+            1,
+            0
+        ],
+        "seasonal_order": [
+            0,
+            1,
+            1,
+            7
+        ],
+        "future_steps": 14,
+        "model_type": "forecasting_sarimax"
+    },
+    "metrics": {
+        "run": "B1_metrics",
+        "mae": 14.666053280248946,
+        "rmse": 17.437095203224185,
+        "elapsed_time_min": 0.004607069492340088,
+        "train_loss": []
+    }
+}

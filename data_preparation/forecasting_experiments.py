@@ -203,6 +203,6 @@ def run_forecasting_lstm(run_id="A1", output_dir="forecasting_results"):
 
 
 if __name__ == '__main__':
-    run_forecasting_lstm("A1")
-    run_sarimax("B1")
+    run_forecasting_lstm("A2")
+    run_sarimax("B2")
 

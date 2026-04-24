@@ -1,5 +1,6 @@
 data_preparation/instacart/*
 data_preparation/instacart.zip
+data_preparation/instacart_src
 data_preparation/insta_clean_data.csv 
 data_preparation/v1_with_groceries_date_count.zip
 

@@ -5,4 +5,5 @@ statsmodels
 plotly
 kaleido
 torch
-safetensorsdash
+safetensors
+dash
