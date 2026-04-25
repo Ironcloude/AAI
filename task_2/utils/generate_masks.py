@@ -85,6 +85,7 @@ def _segment_grabcut(image: np.ndarray) -> np.ndarray:
     return np.where(
         (mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 1, 0).astype(np.uint8)
 
+# Generate segmentation masks for produce images.
 def generate_produce_mask(data_path: str | Path | None = None,
                           output_dir: str | Path | None = None, 
                           method: str = "rembg", sam_model_size: str = "small",

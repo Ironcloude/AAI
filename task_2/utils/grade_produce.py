@@ -11,6 +11,7 @@ except ModuleNotFoundError:
     from generate_masks import generate_produce_mask
 
 
+# Calculate colour features used for produce quality scoring.
 def compute_colour_components(fruit_pixels: np.ndarray
                               ) -> tuple[float, float, float]:
     """Compute raw (vibrancy, brightness, uniformity) from HSV fruit pixels.
@@ -168,6 +169,7 @@ def grade_colour(image_path: str | Path, fruit_type: str, references: dict,
     return round(color_score, 1)
 
 
+# Score produce shape using mask contour solidity.
 def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None
                      ) -> float:
     """Score produce shape using contour solidity.

@@ -54,6 +54,7 @@ def collect_logits(model: torch.nn.Module, dataloader: DataLoader,
     return health_logits, health_labels
 
 
+# Calculate Expected Calibration Error for prediction confidence.
 def compute_ece(logits: torch.Tensor, labels: torch.Tensor,
                 n_bins: int = N_BINS,
                 min_confidence: float | None = None) -> tuple[float, dict]:

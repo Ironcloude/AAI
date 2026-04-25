@@ -10,6 +10,7 @@ import torch
 from torch.utils.data import  Dataset
 from collections import Counter
 
+# Dataset wrapper for loading produce images and labels.
 class ProduceDataset(Dataset):
     """Aggregate produce dataset folder structure into a usable dataset.
 

@@ -8,6 +8,7 @@ sys.path.append("..")
 sys.path.append(".")
 from experiment_configs import task_2_config as experiments
 
+# Multi-task classifier with shared backbone and two output heads.
 class MultiTaskClassifier(nn.Module):
     """Architecture-agnostic multi-task wrapper.
 
