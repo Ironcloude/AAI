@@ -1,0 +1,21 @@
+{
+    "config": {
+        "run": "C1",
+        "n_estimators": 1000,
+        "learning_rate": 0.01,
+        "max_depth": 6,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "early_stopping_rounds": 100,
+        "future_steps": 14,
+        "freq": "D",
+        "model_type": "forecasting_xgboost"
+    },
+    "metrics": {
+        "run": "C1_metrics",
+        "mae": 10.70238971710205,
+        "rmse": 13.900420675155448,
+        "elapsed_time_min": 0.004817442099253336,
+        "train_loss": []
+    }
+}

@@ -16,7 +16,7 @@ from config import RecommenderMetrics
 # CONFIG
 @dataclass
 class NCFConfig:
-    run: str = "D2"
+    run: str = "E1"
     embed_dim: int = 32
     hidden_dims: list = None
     learning_rate: float = 0.001
@@ -346,4 +346,4 @@ def train_ncf(run_id="D2", output_dir="recommender_results"):
 
 
 if __name__ == "__main__":
-    train_ncf("D2")
+    train_ncf("E1")
