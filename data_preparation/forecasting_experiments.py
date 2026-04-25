@@ -47,6 +47,7 @@ def prepare_true_timeseries(filepath='groceries_dataset.csv', freq='D'):
     return aggregated_demand['demand'].values.astype(float), aggregated_demand.index
 
 
+# Prepare sliding windows for LSTM time-series training.
 def create_lstm_sequences(data, lookback):
     X, y = [], []
     for i in range(len(data) - lookback):
@@ -55,6 +56,7 @@ def create_lstm_sequences(data, lookback):
     return np.array(X), np.array(y)
 
 
+# Define the LSTM model used for demand forecasting.
 class TimeSeriesLSTM(nn.Module):
     def __init__(self, input_size=1, hidden_size=64, num_layers=1):
         super(TimeSeriesLSTM, self).__init__()
@@ -73,6 +75,7 @@ class TimeSeriesLSTM(nn.Module):
         return out
 
 
+# Run the SARIMAX forecasting experiment.
 def run_sarimax(run_id="B1", output_dir="forecasting_results"):
     run_config = get_run_config(run_id)
     if not run_config:
@@ -116,6 +119,7 @@ def run_sarimax(run_id="B1", output_dir="forecasting_results"):
         run_config, dates, data, test_dates, test_preds, future_dates, future_preds, metrics, output_dir)
 
 
+# Train and evaluate the LSTM forecasting experiment.
 def run_forecasting_lstm(run_id="A1", output_dir="forecasting_results"):
     run_config = get_run_config(run_id)
     if not run_config:

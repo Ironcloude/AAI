@@ -9,6 +9,7 @@ import run_utils
 from config import get_run_config, ForecastingMetrics
 
 
+# Convert time-series demand into tabular features for XGBoost.
 def prepare_data_for_xgb(filepath='groceries_dataset.csv', freq='D'):
     """
     Loads and prepares the dataset specifically for XGBoost.
@@ -71,6 +72,7 @@ def prepare_data_for_xgb(filepath='groceries_dataset.csv', freq='D'):
     return df_ts, lags, window_short, window_long
 
 
+# Train and evaluate the XGBoost forecasting experiment.
 def run_xgboost_forecaster(run_id="C3", output_dir="forecasting_results"):
     print(f"\n--- Starting Standalone XGBoost Forecasting: {run_id} ---")
     start_time = time.time()

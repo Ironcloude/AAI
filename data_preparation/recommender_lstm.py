@@ -13,6 +13,7 @@ from config import get_run_config, RecommenderMetrics
 import run_utils
 
 
+# Pad user sequences to a fixed length for batching.
 def pad_sequences_custom(sequences, maxlen, padding='pre'):
     padded = np.zeros((len(sequences), maxlen), dtype=int)
     for i, seq in enumerate(sequences):
@@ -61,6 +62,7 @@ def load_and_prepare_sequences(filepath='insta_clean_data.csv', min_seq_length=3
     return X_padded, np.array(y), vocab_size, label_encoder
 
 
+# Define the LSTM model used for next-item recommendation.
 class RecommendationLSTM(nn.Module):
     def __init__(self, vocab_size, embed_dim=64, hidden_dim=128):
         super(RecommendationLSTM, self).__init__()
@@ -81,6 +83,7 @@ class RecommendationLSTM(nn.Module):
         return self.fc2(out)
 
 
+# Train and evaluate the recommender model.
 def train_recommender(run_id="E1", output_dir="recommender_results"):
     run_config = get_run_config(run_id)
     if not run_config:
