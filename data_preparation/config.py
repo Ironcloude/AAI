@@ -55,6 +55,17 @@ class RecommenderLSTMConfig:
     max_lookback: int = 20
     model_type: str = "recommender_lstm"
 
+@dataclass
+class RecommenderNCFConfig:
+    run: str = "D2"
+    embed_dim: int = 32
+    hidden_dims: list = field(default_factory=lambda: [64, 32])
+    learning_rate: float = 0.001
+    batch_size: int = 4096
+    epochs: int = 3
+    sample_frac: float = 0.1
+    model_type: str = "recommender_ncf"
+
 # ---------------------------------------------------------
 # Metrics Tracking Configurations
 # ---------------------------------------------------------
@@ -75,6 +86,8 @@ class RecommenderMetrics:
     epochs: List[int] = field(default_factory=list)
     train_loss: List[float] = field(default_factory=list)
     test_accuracy: List[float] = field(default_factory=list)
+    precision_at_k: float | None = None
+    recall_at_k: float | None = None
     elapsed_time_min: float | None = None
     final_accuracy: float | None = None
 
@@ -104,7 +117,8 @@ C2 = ForecastingXGBoostConfig(run="C2", max_depth=8, n_estimators=2000, freq="D"
 C3 = ForecastingXGBoostConfig(run="C3", max_depth=4, n_estimators=1000, freq="ME", future_steps=3)
 C4 = ForecastingXGBoostConfig(run="C4", max_depth=6, n_estimators=2000, freq="ME", future_steps=3)
 
-# D-Series: RESERVED (future model, NOT implemented)
+# D-Series: Recommender NCF Runs
+D2 = RecommenderNCFConfig(run="D2", epochs=3)
 
 # E-Series: Recommender LSTM Runs (Recommender + LSTM)
 E1 = RecommenderLSTMConfig(run="E1", embed_dim=64,

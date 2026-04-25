@@ -169,3 +169,83 @@ def plot_forecasting_dashboard(run_config, dates, data, test_dates, test_preds, 
         f.write(html_content)
 
     fig.write_image(Path(output_dir) / f"{run_config.run}_dashboard.png")
+
+
+def plot_ncf_dashboard(run_config, metrics, top_k_df, history_df, output_dir="results"):
+    """Plots Training Loss, Val Accuracy, History, and Top-K for NCF."""
+    os.makedirs(output_dir, exist_ok=True)
+
+    fig = make_subplots(
+        rows=4, cols=1,
+        subplot_titles=(f'[{run_config.run}] Training Loss',
+                        f'[{run_config.run}] Val Accuracy',
+                        'User Purchase History (Last 5 Items)',
+                        'Top-K Recommendations (Predicted Probability)'),
+        specs=[[{"type": "xy"}], [{"type": "xy"}], [{"type": "table"}], [{"type": "xy"}]],
+        vertical_spacing=0.08,
+        row_heights=[0.15, 0.15, 0.25, 0.45]
+    )
+
+    # --- 1. Loss ---
+    fig.add_trace(go.Scatter(x=metrics.epochs, y=metrics.train_loss,
+                  mode='lines+markers', name='Loss', line=dict(color='red')), row=1, col=1)
+
+    # --- 2. Accuracy ---
+    fig.add_trace(go.Scatter(x=metrics.epochs, y=metrics.test_accuracy,
+                  mode='lines+markers', name='Accuracy', line=dict(color='green')), row=2, col=1)
+
+    # --- 3. History Table ---
+    fig.add_trace(
+        go.Table(
+            header=dict(values=["User ID", "Previously Purchased Product"],
+                        fill_color='indigo', font=dict(color='white'), align='left'),
+            cells=dict(values=[history_df.user_id_orig, history_df.product_name],
+                       fill_color='darkslateblue', font=dict(color='white'), align='left')
+        ),
+        row=3, col=1
+    )
+
+    # --- 4. Grouped Horizontal Bar Chart ---
+    # Sort for display: Rank 1 at the top for each user
+    plot_df = top_k_df.sort_values(['user_id_orig', 'rank'], ascending=[True, False])
+    
+    for user_id in plot_df['user_id_orig'].unique():
+        user_data = plot_df[plot_df['user_id_orig'] == user_id]
+        fig.add_trace(
+            go.Bar(
+                y=user_data['product_name'],
+                x=user_data['score'],
+                name=f"User {user_id}",
+                orientation='h',
+                text=user_data['score'].apply(lambda x: f"{x:.4f}"),
+                textposition='auto',
+                hovertemplate="User: " + user_id + "<br>Product: %{y}<br>Prob: %{x:.4f}<extra></extra>"
+            ),
+            row=4, col=1
+        )
+
+    fig.update_layout(height=1600, width=1100,
+                      template="plotly_dark",
+                      title_text=f"NCF Run {run_config.run} - Comprehensive Dashboard",
+                      barmode='group',
+                      legend_title="Users")
+    
+    fig.update_yaxes(title_text="Product Name", row=4, col=1)
+    fig.update_xaxes(title_text="Predicted Probability", row=4, col=1)
+
+
+    # Generate HTML string for Plotly
+    plot_div = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+    # Generate Markdown String
+    md_text = get_markdown_text(run_config, metrics)
+
+    # Build complete custom HTML
+    html_content = build_html_template(
+        plot_div, md_text, f"Run {run_config.run} Dashboard")
+
+    # Save the files
+    with open(Path(output_dir) / f"{run_config.run}_dashboard.html", "w") as f:
+        f.write(html_content)
+
+    fig.write_image(Path(output_dir) / f"{run_config.run}_dashboard.png")

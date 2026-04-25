@@ -8,3 +8,5 @@ torch
 safetensors
 dash
 xgboost
+fastparquet
+pyarrow
