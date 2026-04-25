@@ -1,6 +1,6 @@
 # Advanced Artificial Intelligence
 Repository for the AAI group project.
-
+Models, datasets and other ML related resources can be found [here](https://drive.google.com/drive/folders/1kz25InaRNNnn0-tkePQ_GyJM4yTLSm8O?usp=sharing). 
 ```bash
 git clone <this_repo>
 cd <this_repo>
