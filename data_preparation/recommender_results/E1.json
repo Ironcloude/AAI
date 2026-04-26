@@ -1,0 +1,31 @@
+{
+    "config": {
+        "run": "E1",
+        "embed_dim": 32,
+        "hidden_dims": [
+            64,
+            32
+        ],
+        "learning_rate": 0.001,
+        "batch_size": 4096,
+        "epochs": 1,
+        "sample_frac": 1,
+        "model_type": "recommender_ncf"
+    },
+    "metrics": {
+        "run": "E1",
+        "epochs": [
+            1
+        ],
+        "train_loss": [
+            0.599109048786205
+        ],
+        "test_accuracy": [
+            0.646820444335389
+        ],
+        "precision_at_k": 0.013999999999999999,
+        "recall_at_k": 0.017573685086842983,
+        "elapsed_time_min": 5.909397725264231,
+        "final_accuracy": 0.646820444335389
+    }
+}

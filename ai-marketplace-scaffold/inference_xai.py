@@ -9,7 +9,7 @@ import sys
 import cv2
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+# python .\inference_xai.py .\models\EX2_EFFICIENTNET_FINETUNE_20260420102640.safetensors .\images\banana_unhealthy.jpg
 try:
     from safetensors.torch import load_file
     HAS_SAFETENSORS = True

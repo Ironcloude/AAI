@@ -1,0 +1,27 @@
+{
+    "config": {
+        "run": "F1",
+        "embed_dim": 32,
+        "learning_rate": 0.001,
+        "batch_size": 4096,
+        "epochs": 1,
+        "sample_frac": 1,
+        "model_type": "recommender_fm"
+    },
+    "metrics": {
+        "run": "F1_metrics",
+        "epochs": [
+            1
+        ],
+        "train_loss": [
+            0.6344656378204047
+        ],
+        "test_accuracy": [
+            0.6384417377995325
+        ],
+        "precision_at_k": 0.002,
+        "recall_at_k": 0.0021428571428571425,
+        "elapsed_time_min": 3.935146248340607,
+        "final_accuracy": 0.6384417377995325
+    }
+}
