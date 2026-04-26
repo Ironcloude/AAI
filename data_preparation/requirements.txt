@@ -1,0 +1,12 @@
+pandas
+numpy
+scikit-learn
+statsmodels
+plotly
+kaleido
+torch
+safetensors
+dash
+xgboost
+fastparquet
+pyarrow
