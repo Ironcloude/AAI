@@ -228,15 +228,21 @@ task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_dups_no_aug_no_bg/
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical/
 task_2/data/archive.zip
 task_2/data/dirty_hashes.pkl
+task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical.zip
+task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug
+task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug.zip
 golden_dataset/
 Grape/
-
 task_2/data/sam2_large_masks
 task_2/runs/*
 wandb/
 task_2/data/rembg_masks
 task_2/wandb/
-task_2/data/rembg_masks
+rembg_masks.zip
 # Model checkpoints
-task_2/models/*.pth
-task_2/models/*.safetensors
+task_2/models/*
+
+task_2/data/golden_dataset.zip
+task_2/figures
+task_2/data/rembg_masks.zip
+task_2/data/fruit-and-vegetable-disease-healthy-vs-rotten.zip

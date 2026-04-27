@@ -8,28 +8,38 @@ sys.path.append(".")
 from .schema import Experiment, Training, assign_display_names
 
 # EXPERIMENTS
+# Goal:
+# ID val is over-saturated; selection is based on: OOD validation accuracy (primary), OOD AUC-ROC (Secondary), OOD ECE (Tertiary)
+# 1. Identify best dataset variation using EfficientNet STL baseline (deduplication, pre-augmentation)
+# 2. Identify best STL architecture at fixed optimizer (AdamW): EfficientNet vs Swin vs MaxViT
+# 3. On winning arch, MTL vs STL with unified stopping criterion (primary-task loss)
+# 4. On winning arch, architectural ablations:
+#    a. freeze / partial-freeze / finetune
+#    b. pretrained / random-init
+#    c. class-weighted / unweighted loss
+# 5. Augmentation ablation on best config from (4)
+# 6. Post-hoc: temperature scaling on val > OOD ECE check
 
 # --- Efficientnet v2 (efficientnet_v2_) experiments ---
 # EX-1 - Frozen efficientnet_v2_s baseline
 EX1_EFFICIENTNET_FREEZE = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(),
-    optimizer= "sgd"
+    optimizer= "adamw"
 )
 
 # EX-2 - Finetuned efficientnet_v2_s baseline
 EX2_EFFICIENTNET_FINETUNE = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    optimizer= "sgd"
+    optimizer= "adamw"
 )
-
 
 # EX-3 - MTL finetuned efficientnet_v2_s
 EX3_EFFICIENTNET_FINETUNE_MTL = Experiment(
     architecture="efficientnet_v2_s",
     training=Training(transfer_type="FINETUNE"),
-    optimizer= "sgd",
+    optimizer= "adamw",
     primary_task_weight=0.8,
 )
 
@@ -77,6 +87,27 @@ EX9_MAXVIT_FINETUNE_MTL = Experiment(
     architecture="maxvit_t",
     training=Training(transfer_type="FINETUNE", learning_rate=1e-5),
     primary_task_weight=0.8,
+)
+# --- Aug experiments ---
+# EX-10 - MTL finetuned efficientnet_v2_s aug 7
+EX10_EFFICIENTNET_FINETUNE_AUG = Experiment(
+    architecture="efficientnet_v2_s",
+    training=Training(transfer_type="FINETUNE"),
+    aug_magnitude = 7
+)
+
+# EX-11 - MTL finetuned efficientnet_v2_s aug 10
+EX11_EFFICIENTNET_FINETUNE_AUG = Experiment(
+    architecture="efficientnet_v2_s",
+    training=Training(transfer_type="FINETUNE"),
+    aug_magnitude = 10
+)
+
+# EX-12 - MTL finetuned efficientnet_v2_s aug 13
+EX12_EFFICIENTNET_FINETUNE_AUG = Experiment(
+    architecture="efficientnet_v2_s",
+    training=Training(transfer_type="FINETUNE"),
+    aug_magnitude = 13
 )
 
 assign_display_names(sys.modules[__name__])
