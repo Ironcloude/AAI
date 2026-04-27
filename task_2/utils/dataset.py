@@ -48,7 +48,7 @@ class ProduceDataset(Dataset):
 
             # Parse "<type>__<health>"  type="apple", health=0
             health_label = 0 if "healthy" in folder_name.lower() else 1
-            fruit_type = folder_name.split(" __ ")[0].strip().lower()
+            fruit_type = folder_name.split("__")[0].strip().lower()
 
             # Store produce type and corresponding index
             if fruit_type not in self.produce_type_to_index:
@@ -109,9 +109,9 @@ class ProduceDataset(Dataset):
 
     def print_class_balance(self) -> None:
         """Print counts of health and type labels across the dataset."""
-        print(f"\nLoaded {self.__len__()} images total\n")
         health_counts = Counter(self.health_lbls)
         type_counts = Counter(self.produce_type_lbls)
+        print(f"\nLoaded {self.__len__()} images total\n")
         print(f"Class Breakdown\n{'='*10}\n{'HEALTHY (0)':<20}{health_counts[0]}\n{'ROTTEN (1)':<20}{health_counts[1]}\n")
         print(f"\nType Breakdown\n{'='*10}")
         for type_idx, count in type_counts.items():
