@@ -1,6 +1,21 @@
 # Advanced Artificial Intelligence
 Repository for the AAI group project.
 
+Notebooks:
+
+Task 1
+- [Task1 part_1](./task_1/dataset_groceries.ipynb)
+- [Task1 part_2](./task_1/dataset_instacart.ipynb)
+- [Task1 part_3](./task_1/task1part3.ipynb)
+
+Task 2
+
+- [data_eval.ipynb](./task_2/data_eval.ipynb)
+- [golden_dataset_eval.ipynb](./task_2/golden_dataset_eval.ipynb)
+- [task_2_inference.ipynb](./task_2/task_2_inference.ipynb)
+- [task_2_optuma.ipynb](./task_2/task_2_optuma.ipynb)
+- [task_2_train.ipynb](./task_2/task_2_train.ipynb)
+
 <b>Models, datasets and other ML related resources can be found [here](https://drive.google.com/drive/folders/1kz25InaRNNnn0-tkePQ_GyJM4yTLSm8O?usp=sharing).</b>
 
 ```bash
