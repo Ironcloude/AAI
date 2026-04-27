@@ -4,9 +4,9 @@ Repository for the AAI group project.
 Notebooks:
 
 Task 1
-- [Task1 part_1](./data_preparation/dataset_groceries.ipynb)
-- [Task1 part_2](./data_preparation/dataset_instacart.ipynb)
-- [Task1 part_3](./data_preparation/task1part3.ipynb)
+- [Task1 part_1](./task_1/dataset_groceries.ipynb)
+- [Task1 part_2](./task_1/dataset_instacart.ipynb)
+- [Task1 part_3](./task_1/task1part3.ipynb)
 
 Task 2
 
