@@ -1,8 +1,9 @@
-data_preparation/instacart/*
-data_preparation/instacart.zip
-data_preparation/instacart_src
-data_preparation/insta_clean_data.csv 
-data_preparation/v1_with_groceries_date_count.zip
+task_1/instacart/*
+task_1/instacart.zip
+task_1/instacart_src
+task_1/insta_clean_data.csv 
+task_1/insta_clean_data.parquet
+task_1/v1_with_groceries_date_count.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
