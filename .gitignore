@@ -4,7 +4,6 @@ data_preparation/instacart_src
 data_preparation/insta_clean_data.csv 
 data_preparation/v1_with_groceries_date_count.zip
 data_preparation/insta_clean_data.parquet
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
