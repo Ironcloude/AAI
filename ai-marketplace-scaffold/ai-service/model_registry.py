@@ -10,7 +10,7 @@ from bootstrap_model import bootstrap_default_model
 
 
 SUPPORTED_EXECUTABLE_TABULAR_SUFFIXES = {".joblib", ".pkl"}
-SUPPORTED_EXECUTABLE_IMAGE_SUFFIXES = {".pth"}
+SUPPORTED_EXECUTABLE_IMAGE_SUFFIXES = {".pth", ".safetensors"}
 SUPPORTED_ACCEPTED_SUFFIXES = {".joblib", ".pkl", ".safetensors", ".gguf", ".pth"}
 
 
@@ -102,15 +102,15 @@ class ModelRegistry:
             "models": state.get("models", {}),
         }
 
-    def register_model(self, filename: str, task_type: str, display_name: Optional[str] = None) -> Dict[str, Any]:
+    def register_model(self, filename: str, task_type: str, display_name: Optional[str] = None,
+                       image_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         suffix = Path(filename).suffix.lower()
         if suffix not in SUPPORTED_ACCEPTED_SUFFIXES:
             raise ValueError(f"Unsupported model suffix: {suffix}")
 
         runtime_supported = (suffix in SUPPORTED_EXECUTABLE_TABULAR_SUFFIXES and task_type == "tabular") or \
                             (suffix in SUPPORTED_EXECUTABLE_IMAGE_SUFFIXES and task_type == "image")
-        state = self._read_registry()
-        state.setdefault("models", {})[filename] = {
+        entry = {
             "display_name": display_name or filename,
             "task_type": task_type,
             "format": suffix,
@@ -118,8 +118,12 @@ class ModelRegistry:
             "runtime_supported": runtime_supported,
             "source": "upload",
         }
+        if image_config:
+            entry["image_config"] = image_config
+        state = self._read_registry()
+        state.setdefault("models", {})[filename] = entry
         self._write_registry(state)
-        return state["models"][filename]
+        return entry
 
     def select_model(self, model_name: str) -> Dict[str, Any]:
         print(f"DEBUG: Registry select_model lock acquired", flush=True)
@@ -191,7 +195,7 @@ class ModelRegistry:
             # Import here to avoid circular/unnecessary imports
             from image_pipeline import load_model
             print(f"DEBUG: Calling image_pipeline.load_model", flush=True)
-            model = load_model(use_file=True, path=str(path))
+            model = load_model(use_file=True, path=str(path), config=model_meta.get("image_config"))
             print(f"DEBUG: image_pipeline.load_model returned", flush=True)
             self._loaded_models[model_name] = model
             return model

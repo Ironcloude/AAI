@@ -35,7 +35,20 @@
       "path": "/app/models/EfficientNet_V2_S.pth",
       "runtime_supported": true,
       "source": "upload"
+    },
+    "EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors": {
+      "display_name": "Swin MTL",
+      "task_type": "image",
+      "format": ".safetensors",
+      "path": "/app/models/EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors",
+      "runtime_supported": true,
+      "source": "upload",
+      "image_config": {
+        "architecture": "swin_s",
+        "is_mtl": true,
+        "num_produce_types": 14
+      }
     }
   },
-  "active_model_name": "EfficientNet_V2_S.pth"
+  "active_model_name": "EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors"
 }

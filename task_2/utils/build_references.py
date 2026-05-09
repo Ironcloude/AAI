@@ -129,7 +129,6 @@ def build_colour_references(dataset_root: str | Path, mask_root: str | Path = No
             cls_uniformity.append(uniformity)
 
             histograms.append(hist)
-
         print(f"{produce_directory.name}: {len(cls_vibrancy)} samples, {drop_count} dropped")
         
         if histograms:
