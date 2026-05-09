@@ -3,13 +3,15 @@
 import sys
 from pathlib import Path
 import cv2
+from matplotlib.pyplot import hsv
 import numpy as np
 sys.path.append(".")
 try:
     from utils.generate_masks import generate_produce_mask
 except ModuleNotFoundError:
     from generate_masks import generate_produce_mask
-
+import pickle
+from pathlib import Path
     
 def grade_colour_dual(image_path, fruit_type,
                      healthy_refs, rotten_refs,
@@ -41,15 +43,18 @@ def grade_colour_dual(image_path, fruit_type,
         ref = ref.astype(np.float32)
         return ref / (ref.sum() + 1e-8)
 
-    h_ref = _norm(healthy_refs[fruit_key]["median"])
-    r_ref = _norm(rotten_refs[fruit_key]["median"])
+    h_ref = _norm(healthy_refs[fruit_key]["mean"])
+    r_ref = _norm(rotten_refs[fruit_key]["mean"])
     distance_healthy = cv2.compareHist(hist, h_ref, cv2.HISTCMP_BHATTACHARYYA)
     distance_rotten = cv2.compareHist(hist, r_ref, cv2.HISTCMP_BHATTACHARYYA)
     if distance_healthy + distance_rotten == 0: # Division by zero gaurd
         return None
     
-    # for plot display
-    summary_lines = [f"d_H:{distance_healthy:.3f} | d_R:{distance_rotten:.3f}"]
+    # for plot display — compact, aligned, separated from main scores by a rule
+    summary_lines = [
+        "─" * 38,
+        f"Bhattacharyya: d_H={distance_healthy:.3f}  d_R={distance_rotten:.3f}",
+    ]
     
     if verbose:
         print("\n" + "="*50)
@@ -60,14 +65,15 @@ def grade_colour_dual(image_path, fruit_type,
         print(f"{'d_rotten':<10} = {distance_rotten:.4f}")
 
     if gamma:
+        # Exponential decay function
         weight_healthy = np.exp(-gamma * distance_healthy)
         weight_rotten = np.exp(-gamma * distance_rotten)
         
         score = (weight_healthy / (weight_healthy + weight_rotten)) * 100
         score_ref = (distance_rotten / (distance_healthy + distance_rotten)) * 100
 
-        summary_lines.append(f"w_H:{weight_healthy:.3f} | w_R:{weight_rotten:.3f} (g={gamma})")
-        summary_lines.append(f"Score:{score:.1f}% (Raw:{score_ref:.1f}%)")
+        summary_lines.append(f"Weighted (γ={gamma}): w_H={weight_healthy:.3f}  w_R={weight_rotten:.3f}")
+        summary_lines.append(f"Score: {score:.1f}%")
         
         if verbose:
             print(f"\n2. Exponential Weighting (gamma = {gamma}):")
@@ -82,8 +88,8 @@ def grade_colour_dual(image_path, fruit_type,
             print(f"FINAL COLOUR GRADE: {score:.1f}% (Unweighted: {score_ref:1f} )")
 
     else:
-        score = (distance_rotten / (distance_healthy + distance_rotten)) * 100 
-        summary_lines.append(f"Score:{score:.1f}%")
+        score = (distance_rotten / (distance_healthy + distance_rotten)) * 100
+        summary_lines.append(f"Score: {score:.1f}%   (distance-ratio formulation)")
         if verbose:
             print("\n2. Final Score Calculation (Raw Distance Ratio):")
             print(f"{'Formula:':<10} (d_rotten / (d_healthy + d_rotten)) * 100")
@@ -117,10 +123,10 @@ def compute_colour_components(fruit_pixels: np.ndarray
     value = fruit_pixels[:, 2]
 
     # Drop specular highlights; fall back to raw pixels if nothing remains
-    not_specular = ~((value > 240) & (saturation < 30))
-    if not_specular.any():
-        saturation = saturation[not_specular]
-        value = value[not_specular]
+    # not_specular = ~((value > 240) & (saturation < 30))
+    # if not_specular.any():
+    #     saturation = saturation[not_specular]
+    #     value = value[not_specular]
 
     vibrancy = float((saturation.mean() / 255))
     brightness = float(value.mean() / 255)
@@ -242,9 +248,122 @@ def grade_colour(image_path: str | Path, fruit_type: str, references: dict,
         dist = cv2.compareHist(hist, ref, cv2.HISTCMP_BHATTACHARYYA)
         return (1 - dist) * 100
 
-    colour_score = _score(hsv, [0, 1], [30, 32], [0, 180, 0, 256], "median")
+    colour_score = _score(hsv, [0, 1], [30, 32], [0, 180, 0, 256], "mean")
 
     return round(colour_score, 1)
+
+
+def visualize_bhattacharyya_score(
+    image_path: str | Path,
+    fruit_type: str,
+    healthy_refs: dict,
+    rotten_refs: dict,
+    mask: np.ndarray | None = None,
+    save_path: str | Path | None = None,
+) -> dict:
+    """Visualise dual-reference Bhattacharyya scoring for a single image.
+
+    Produces a 2x3 figure: top row shows original/mask/segmented; bottom row
+    shows query histogram and the two reference histograms with Bhattacharyya
+    distances annotated. The figure title carries the final score.
+
+    Args:
+        image_path: Path to the source image.
+        fruit_type: Produce type name (key into the references dicts; '__'
+            suffix is stripped automatically).
+        healthy_refs: Dict mapping fruit-key -> {"median": HSV histogram, ...}
+            for healthy training samples.
+        rotten_refs: Same shape, for rotten training samples.
+        mask: Optional binary mask (0/1). Generated if not provided.
+        save_path: Optional path to save the figure (PNG recommended).
+
+    Returns:
+        Dict with d_healthy, d_rotten, score, and the matplotlib figure.
+    """
+    import matplotlib.pyplot as plt
+
+    img = cv2.imread(str(image_path))
+    if img is None:
+        raise FileNotFoundError(f"Could not read {image_path}")
+
+    max_dim = 512
+    h, w = img.shape[:2]
+    if max(h, w) > max_dim:
+        scale = max_dim / max(h, w)
+        img = cv2.resize(img, (int(w * scale), int(h * scale)))
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    if mask is None:
+        mask = generate_produce_mask(str(image_path))
+    mask = cv2.resize(mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
+    if mask.dtype != np.uint8:
+        mask = mask.astype(np.uint8)
+
+    fruit_key = fruit_type.split("__")[0].strip().lower()
+    if fruit_key not in healthy_refs:
+        raise KeyError(f"'{fruit_key}' missing from healthy_refs (keys: {list(healthy_refs.keys())[:5]}...)")
+    if fruit_key not in rotten_refs:
+        raise KeyError(f"'{fruit_key}' missing from rotten_refs (keys: {list(rotten_refs.keys())[:5]}...)")
+
+    # Compute query histogram + L1-normalise both query and references identically
+    query_hist = cv2.calcHist([hsv], [0, 1], mask, [30, 32], [0, 180, 0, 256]).astype(np.float32)
+    query_hist /= (query_hist.sum() + 1e-8)
+    h_ref = healthy_refs[fruit_key]["mean"].astype(np.float32)
+    h_ref = h_ref / (h_ref.sum() + 1e-8)
+    r_ref = rotten_refs[fruit_key]["mean"].astype(np.float32)
+    r_ref = r_ref / (r_ref.sum() + 1e-8)
+
+    dist_h = cv2.compareHist(query_hist, h_ref, cv2.HISTCMP_BHATTACHARYYA)
+    dist_r = cv2.compareHist(query_hist, r_ref, cv2.HISTCMP_BHATTACHARYYA)
+    score = dist_r / (dist_h + dist_r + 1e-8) * 100
+
+    segmented = img_rgb.copy()
+    segmented[mask == 0] = 0
+
+    # Shared colour scale across the three histograms for honest comparison
+    vmax = max(query_hist.max(), h_ref.max(), r_ref.max())
+    extent = [0, 180, 0, 256]   # hue (x) by saturation (y)
+
+    fig, axes = plt.subplots(2, 3, figsize=(13, 8))
+    fig.suptitle(
+        f"Dual-reference unweighted Bhattacharyya scoring - '{fruit_key}'   "
+        f"$d_H={dist_h:.3f}$, $d_R={dist_r:.3f}$, "
+        f"score $= {score:.1f}\\%$",
+        fontsize=12,
+    )
+
+    axes[0, 0].imshow(img_rgb);                            axes[0, 0].set_title("Original");  axes[0, 0].axis("off")
+    axes[0, 1].imshow(mask, cmap="gray", vmin=0, vmax=1);  axes[0, 1].set_title("Mask");      axes[0, 1].axis("off")
+    axes[0, 2].imshow(segmented);                          axes[0, 2].set_title("Segmented"); axes[0, 2].axis("off")
+
+    axes[1, 0].imshow(query_hist.T, origin="lower", aspect="auto", extent=extent, cmap="hot", vmin=0, vmax=vmax)
+    axes[1, 0].set_title("Query histogram")
+    axes[1, 0].set_xlabel("Hue"); axes[1, 0].set_ylabel("Saturation")
+
+    axes[1, 1].imshow(h_ref.T, origin="lower", aspect="auto", extent=extent, cmap="hot", vmin=0, vmax=vmax)
+    axes[1, 1].set_title(f"Healthy reference  ($d={dist_h:.3f}$)")
+    axes[1, 1].set_xlabel("Hue"); axes[1, 1].set_ylabel("Saturation")
+
+    axes[1, 2].imshow(r_ref.T, origin="lower", aspect="auto", extent=extent, cmap="hot", vmin=0, vmax=vmax)
+    axes[1, 2].set_title(f"Rotten reference  ($d={dist_r:.3f}$)")
+    axes[1, 2].set_xlabel("Hue"); axes[1, 2].set_ylabel("Saturation")
+
+    plt.tight_layout()
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(str(save_path), dpi=150, bbox_inches="tight")
+        print(f"Saved {save_path}")
+
+    return {
+        "fruit_key": fruit_key,
+        "dist_healthy": float(dist_h),
+        "dist_rotten": float(dist_r),
+        "score": float(score),
+        "fig": fig,
+    }
 
 
 def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None
@@ -284,3 +403,35 @@ def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None
     # Weighted combination
     proportion_score = solidity * 100
     return round(proportion_score, 1)
+
+if __name__ == "__main__":
+
+
+    # Load both reference sets
+    with open("task_2/data/colour_references_rembg.pkl", "rb") as f:
+        healthy_refs = {k.lower(): v for k, v in pickle.load(f).items()}
+    with open("task_2/data/colour_references_rembg_rotten.pkl", "rb") as f:
+        rotten_refs = {k.lower(): v for k, v in pickle.load(f).items()}
+
+    # Single example
+#     result = visualize_bhattacharyya_score(
+# "task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug/Apple__Healthy/FreshApple (7).jpg",
+#         fruit_type="strawberry",
+#         healthy_refs=healthy_refs,
+#         rotten_refs=rotten_refs,
+#         save_path="task_2/figures/dual_score_banana.png",
+#     )
+#     print(f"d_H={result['dist_healthy']:.3f}, d_R={result['dist_rotten']:.3f}, score={result['score']:.1f}%")
+
+
+
+    test_cases = [
+        ("task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug/Apple__Healthy/FreshApple (7).jpg",        "apple"),   
+        ("/home/jaime/AAI/AAI/task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug/Apple__Healthy/vertical_flip_Screen Shot 2018-06-08 at 5.18.42 PM.png",  "apple"),   
+        ("/home/jaime/AAI/AAI/task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug/Apple__Rotten/rottenApple (173).jpg", "apple"),  
+    ]
+    for path, ftype in test_cases:
+        visualize_bhattacharyya_score(
+            path, ftype, healthy_refs, rotten_refs,
+            save_path=f"task_2/figures/dual_{Path(path).stem}.png",
+        )

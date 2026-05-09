@@ -38,28 +38,30 @@ def is_augmented(name: str) -> bool:
     lower = name.lower()
     return any(kw in lower for kw in AUG_KEYWORDS)
 
-                                                                            
-removed = Counter()
-kept    = Counter()
 
-for p in list(SRC.rglob("*.jpg")) + list(SRC.rglob("*.png")) + list(SRC.rglob("*.jpeg")):
-    print(p)
-    flag = "REMOVE" if is_augmented(p.name) else "keep  "
-    print(flag, p.parent.name, "/", p.name)
-for img_path in list(SRC.rglob("*.jpg")) + list(SRC.rglob("*.png")) + list(SRC.rglob("*.jpeg")):
-    folder = img_path.parent.name
-    if is_augmented(img_path.name):
-        removed[folder] += 1
-        continue
-    dest_dir = DEST / folder
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(img_path, dest_dir / img_path.name)
-    kept[folder] += 1
 
-print(f"{'Folder':<30} {'Kept':>6} {'Removed':>8}")
-print("-" * 46)
-for folder in sorted(set(kept) | set(removed)):
-    print(f"{folder:<30} {kept[folder]:>6} {removed[folder]:>8}")
-print(f"\nTotal kept:    {sum(kept.values())}")
-print(f"Total removed: {sum(removed.values())}")
+if __name__ == "__main__":
+    removed = Counter()
+    kept    = Counter()
+
+    for p in list(SRC.rglob("*.jpg")) + list(SRC.rglob("*.png")) + list(SRC.rglob("*.jpeg")):
+        print(p)
+        flag = "REMOVE" if is_augmented(p.name) else "keep  "
+        print(flag, p.parent.name, "/", p.name)
+    for img_path in list(SRC.rglob("*.jpg")) + list(SRC.rglob("*.png")) + list(SRC.rglob("*.jpeg")):
+        folder = img_path.parent.name
+        if is_augmented(img_path.name):
+            removed[folder] += 1
+            continue
+        dest_dir = DEST / folder
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(img_path, dest_dir / img_path.name)
+        kept[folder] += 1
+
+    print(f"{'Folder':<30} {'Kept':>6} {'Removed':>8}")
+    print("-" * 46)
+    for folder in sorted(set(kept) | set(removed)):
+        print(f"{folder:<30} {kept[folder]:>6} {removed[folder]:>8}")
+    print(f"\nTotal kept:    {sum(kept.values())}")
+    print(f"Total removed: {sum(removed.values())}")
 
