@@ -9,12 +9,14 @@ import sys
 import cv2
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+# python .\inference_xai.py .\models\EX2_EFFICIENTNET_FINETUNE_20260420102640.safetensors .\images\banana_unhealthy.jpg
 try:
     from safetensors.torch import load_file
     HAS_SAFETENSORS = True
 except ImportError:
     HAS_SAFETENSORS = False
+
+
 class MultiTaskClassifier(nn.Module):
     def __init__(self, base_model, num_produce_classes, num_health_classes=2):
         super().__init__()
@@ -125,10 +127,14 @@ class GuidedBackprop:
 
 
 def load_model(path):
+    """Load a model from a .pth or .safetensors file, detecting MTL vs STL."""
     print(f"--- Activating model: {os.path.basename(path)} ---")
     if path.endswith(".safetensors"):
         if not HAS_SAFETENSORS:
-            raise ImportError("safetensors library not found. Please install it via 'pip install safetensors'.")
+            raise ImportError(
+                "safetensors library not found. "
+                "Please install it via 'pip install safetensors'."
+            )
         state_dict = load_file(path, device="cpu")
     else:
         state_dict = torch.load(path, map_location="cpu", weights_only=True)
@@ -154,6 +160,7 @@ def load_model(path):
 
 
 def create_visualizations(image_np, cam, guided_grads, label, conf, title_suffix):
+    """Render a 2x2 XAI subplot and save to xai_result.html."""
     # Prepare image for plotly (H, W, C)
     img_rgb = image_np
 
@@ -163,7 +170,10 @@ def create_visualizations(image_np, cam, guided_grads, label, conf, title_suffix
     guided_cam_min = np.min(guided_cam)
     guided_cam_max = np.max(guided_cam)
     if guided_cam_max > guided_cam_min:
-        guided_cam = (guided_cam - guided_cam_min) / (guided_cam_max - guided_cam_min + 1e-8)
+        guided_cam = (
+            (guided_cam - guided_cam_min)
+            / (guided_cam_max - guided_cam_min + 1e-8)
+        )
 
     fig = make_subplots(
         rows=2, cols=2,
@@ -209,6 +219,7 @@ def create_visualizations(image_np, cam, guided_grads, label, conf, title_suffix
 
 
 def main():
+    """Entry point: run XAI inference on a model and image from command line."""
     if len(sys.argv) < 3:
         print("Usage: python inference_xai.py <model_path> <image_path>")
         sys.exit(1)
@@ -223,7 +234,7 @@ def main():
     preprocess = EfficientNet_V2_S_Weights.DEFAULT.transforms()
     input_tensor = preprocess(image).unsqueeze(0)
 
-    # Use original high-res image for plotting (Avoid pixelation)
+    # Use original high-res image for plotting (avoid pixelation)
     img_display = np.array(image) / 255.0
     h_orig, w_orig = img_display.shape[:2]
 
@@ -260,11 +271,15 @@ def main():
     guided_grads = gbp.generate(input_tensor, h_idx, is_mtl=is_mtl)
 
     # Upscale XAI maps to match high-res display image
-    cam_high_res = cv2.resize(cam, (w_orig, h_orig), interpolation=cv2.INTER_CUBIC)
-    
+    cam_high_res = cv2.resize(
+        cam, (w_orig, h_orig), interpolation=cv2.INTER_CUBIC
+    )
+
     guided_grads_res = guided_grads.transpose(1, 2, 0)
-    guided_grads_high_res = cv2.resize(guided_grads_res, (w_orig, h_orig), interpolation=cv2.INTER_CUBIC)
-    # Convert back to (C, H, W) for visualization function consistency if needed, 
+    guided_grads_high_res = cv2.resize(
+        guided_grads_res, (w_orig, h_orig), interpolation=cv2.INTER_CUBIC
+    )
+    # Convert back to (C, H, W) for visualization function consistency if needed,
     # but we'll update create_visualizations to handle (H, W, C) directly for grads.
     guided_grads_high_res = guided_grads_high_res.transpose(2, 0, 1)
 

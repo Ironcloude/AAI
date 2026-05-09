@@ -1,0 +1,26 @@
+{
+    "config": {
+        "run": "B3",
+        "order": [
+            1,
+            1,
+            1
+        ],
+        "seasonal_order": [
+            0,
+            1,
+            0,
+            12
+        ],
+        "future_steps": 3,
+        "model_type": "forecasting_sarimax",
+        "freq": "ME"
+    },
+    "metrics": {
+        "run": "B3_metrics",
+        "mae": 109.67819283039576,
+        "rmse": 131.26576401376155,
+        "elapsed_time_min": 0.001064765453338623,
+        "train_loss": []
+    }
+}
