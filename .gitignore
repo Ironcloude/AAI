@@ -249,3 +249,4 @@ task_2/data/rembg_masks.zip
 task_2/data/fruit-and-vegetable-disease-healthy-vs-rotten.zip
 *:Zone.Identifier*
 task_2/models.zip
+groceries_dataset.csv
