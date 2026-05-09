@@ -6,7 +6,6 @@ import torch.nn as nn
 from torchvision.models import get_model, get_weight
 sys.path.append("..")
 sys.path.append(".")
-from experiment_configs import task_2_config as experiments
 
 class MultiTaskClassifier(nn.Module):
     """Architecture-agnostic multi-task wrapper.
@@ -111,6 +110,7 @@ class MultiTaskClassifier(nn.Module):
         return self.health_head(features), self.type_head(features)
 
 if __name__ == "__main__":
+    from experiment_configs import task_2_config as experiments
     for exp in [experiments.EX3_EFFICIENTNET_FINETUNE_MTL, experiments.EX6_SWIN_FINETUNE_MTL,
                 experiments.EX9_MAXVIT_FINETUNE_MTL]:
         print(f"\nInstantiating experiment: {exp.display_name}")

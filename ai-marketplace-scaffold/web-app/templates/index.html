@@ -57,27 +57,26 @@
     </div>
 
     <div class="grid">
-      <!-- Combined: Service health + Models -->
-      <section class="card" id="sec-service-models">
-        <h2>Service & Models <span class="chip meta">metadata</span></h2>
-        <div class="endpoints">
-          <div>Web: <code>GET /ai/health</code>, <code>GET /models</code>, <code>POST /models/upload</code>, <code>POST /models/select</code></div>
-          <div>AI: <code>GET /health</code>, <code>GET /models</code>, <code>POST /models/upload</code>, <code>POST /models/select</code></div>
-        </div>
 
-        <div class="row" style="gap:12px; align-items: center;">
+      <!-- Section 1: Service Status -->
+      <section class="card" id="sec-service-status">
+        <h2>Service Status <span class="chip meta">metadata</span></h2>
+        <div class="endpoints">
+          <div>Web: <code>GET /ai/health</code>, <code>GET /models</code></div>
+          <div>AI: <code>GET /health</code>, <code>GET /models</code></div>
+        </div>
+        <div class="row" style="gap:12px; align-items:center;">
           <div class="row" style="gap:6px; align-items:center;">
             <span id="dot-health" class="dot"></span>
             <span class="muted">Health</span>
           </div>
-          <div class="row" style="gap:6px; align-items:center;">
-            <span class="muted">Active</span>
-            <strong id="active-model-name">—</strong>
-          </div>
           <div style="margin-left:auto"></div>
           <button id="btn-sync">Sync</button>
         </div>
-
+        <div style="margin-top:6px;">
+          <span class="muted">Active</span>
+          <strong id="active-model-name" style="margin-left:6px;">-</strong>
+        </div>
         <div class="row" style="gap:12px; align-items:flex-start; flex-wrap: wrap; margin-top:8px;">
           <div style="flex:1; min-width:280px;">
             <label class="resp-label">/ai/health response</label>
@@ -88,8 +87,15 @@
             <pre id="out-models"></pre>
           </div>
         </div>
+      </section>
 
-        <hr style="border:0;border-top:1px solid var(--border); margin: 12px 0" />
+      <!-- Section 2: Model Upload & Activation -->
+      <section class="card" id="sec-model-mgmt">
+        <h2>Model Management <span class="chip meta">metadata</span></h2>
+        <div class="endpoints">
+          <div>Web: <code>POST /models/upload</code>, <code>POST /models/select</code></div>
+          <div>AI: <code>POST /models/upload</code>, <code>POST /models/select</code></div>
+        </div>
 
         <div class="row" style="gap:12px; align-items:flex-end; flex-wrap: wrap;">
           <div>
@@ -107,29 +113,53 @@
             <label>Name</label><br />
             <input type="text" id="inp-display-name" placeholder="optional" />
           </div>
-          <button id="btn-upload-model">Upload</button>
         </div>
-        <div class="hint">Uploads go to shared <code>/app/models</code>. Non-executable formats will register as metadata only.</div>
 
-        <div class="row" style="gap:12px; margin-top:12px; align-items:flex-end; flex-wrap: wrap;">
+        <div id="img-config" style="display:none; margin-top:10px; padding:10px; border:1px dashed var(--border); border-radius:8px;">
+          <div class="muted" style="margin-bottom:8px;">Image model configuration</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div>
+              <label>PyTorch architecture</label><br />
+              <input type="text" id="inp-arch" list="arch-list" placeholder="Type to filter…" autocomplete="off" style="width:100%; margin-top:4px; box-sizing:border-box;" />
+              <datalist id="arch-list"></datalist>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="inp-mtl" style="width:auto; padding:0;" />
+              <label for="inp-mtl" style="margin:0;">Multi-task (MTL)</label>
+            </div>
+            <div class="hint">Produce type count is auto-detected from the model weights.</div>
+          </div>
+        </div>
+
+        <div class="hint" style="margin-top:8px;">Uploads go to shared <code>/app/models</code>. Non-executable formats will register as metadata only.</div>
+        <div style="margin-top:10px;">
+          <button id="btn-upload-model" disabled>Upload</button>
+        </div>
+        <div id="out-upload" style="display:none; margin-top:10px; padding:10px; border-radius:8px; border:1px solid var(--err); background:#1f0a0a; color:#fca5a5; font-size:13px; white-space:pre-wrap; word-break:break-word;">
+          <strong style="color:var(--err); display:block; ">Upload failed</strong>
+          <span id="out-upload-msg"></span>
+        </div>
+
+        <div class="subsep"></div>
+
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
           <div>
             <label>Activate (executable only)</label><br />
-            <select id="sel-models" style="min-width: 260px"></select>
+            <select id="sel-models" style="width:100%; margin-top:4px;"></select>
           </div>
-          <button id="btn-activate-model">Activate</button>
+          <div><button id="btn-activate-model">Activate</button></div>
         </div>
         <label class="resp-label">/models/select response</label>
         <pre id="out-activate"></pre>
       </section>
 
-      <!-- Combined: Model operations (XAI + Tabular + Image) -->
+      <!-- Section 3: Model Operations -->
       <section class="card" id="sec-model-ops">
-        <h2>Model operations <span class="chip model">uses model</span></h2>
+        <h2>Model Operations <span class="chip model">uses model</span></h2>
         <div class="endpoints">
           <div><code>GET /xai/active-model</code> · <code>POST /predict/tabular</code> · <code>POST /predict/image</code></div>
         </div>
 
-        <!-- XAI sub-block (on top) -->
         <div>
           <h3 class="subhead">XAI</h3>
           <div class="row">
@@ -142,7 +172,6 @@
 
         <div class="subsep"></div>
 
-        <!-- Tabular sub-block -->
         <div>
           <h3 class="subhead">Tabular</h3>
           <div class="row">
@@ -158,7 +187,6 @@
 
         <div class="subsep"></div>
 
-        <!-- Image sub-block -->
         <div>
           <h3 class="subhead">Image</h3>
           <div class="row">
@@ -172,6 +200,7 @@
           <pre id="out-image"></pre>
         </div>
       </section>
+
     </div>
   </main>
 
@@ -270,7 +299,7 @@
           const opt = document.createElement('option'); opt.value = name; opt.textContent = meta?.display_name ? `${meta.display_name} (${name})` : name; if (name === active) opt.selected = true; sel.appendChild(opt);
         }
         if (sel.options.length === 0) { const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'No executable models available'; sel.appendChild(opt); }
-        j('#active-model-name').textContent = active || '—';
+        j('#active-model-name').textContent = (active && models[active]?.display_name) ? models[active].display_name : (active || '—');
       } catch (_) {}
     }
 
@@ -296,12 +325,50 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      function updateUploadEnabled() {
+        const task = j('#inp-task-type').value;
+        const hasFile = j('#inp-model-file').files.length > 0;
+        const hasArch = j('#inp-arch').value.trim() !== '';
+        const btn = j('#btn-upload-model');
+        btn.disabled = task === 'image' ? !(hasFile && hasArch) : !hasFile;
+      }
+
+      async function loadArchitectures() {
+        try {
+          const res = await fetch('/models/architectures');
+          const data = await res.json();
+          j('#arch-list').innerHTML = (data.architectures || []).map(a => `<option value="${a}">`).join('');
+        } catch (_) {}
+      }
+
       j('#btn-sync').addEventListener('click', (e) => syncServiceAndModels(e));
+
+      j('#inp-task-type').addEventListener('change', function() {
+        j('#img-config').style.display = this.value === 'image' ? '' : 'none';
+        updateUploadEnabled();
+      });
+
+      j('#inp-model-file').addEventListener('change', updateUploadEnabled);
+      j('#inp-arch').addEventListener('input', updateUploadEnabled);
 
       j('#btn-upload-model').addEventListener('click', async (e) => {
         const file = j('#inp-model-file').files[0]; const task = j('#inp-task-type').value || 'tabular'; const display = j('#inp-display-name').value || '';
         const fd = new FormData(); if (file) fd.append('model', file); fd.append('task_type', task); if (display) fd.append('display_name', display);
-        await requestJson('POST', '/models/upload', fd, j('#out-models'), e.currentTarget, '/models/upload');
+        if (task === 'image') {
+          fd.append('architecture', j('#inp-arch').value.trim());
+          fd.append('is_mtl', j('#inp-mtl').checked ? 'true' : 'false');
+        }
+        j('#out-upload').style.display = 'none';
+        j('#out-upload-msg').textContent = '';
+        const { status, data } = await requestJson('POST', '/models/upload', fd, null, e.currentTarget, '/models/upload');
+        if (status < 200 || status >= 300) {
+          const msg = (data && data.error) ? data.error : JSON.stringify(data);
+          const el = j('#out-upload-msg');
+          el.textContent = msg.length > 200 ? msg.slice(0, 200) + '…' : msg;
+          el.title = msg;
+          j('#out-upload').style.display = '';
+        }
+        updateUploadEnabled();
         syncServiceAndModels();
       });
 
@@ -326,6 +393,8 @@
 
       j('#btn-xai-active').addEventListener('click', (e) => requestJson('GET', '/xai/active-model', null, j('#out-xai'), e.currentTarget, '/xai/active-model'));
 
+      loadArchitectures();
+      updateUploadEnabled();
       syncServiceAndModels();
     });
   </script>

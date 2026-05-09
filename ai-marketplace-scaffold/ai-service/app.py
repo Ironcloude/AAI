@@ -31,6 +31,28 @@ def list_models():
     return jsonify(registry.list_models())
 
 
+@app.get("/models/architectures")
+def list_architectures():
+    """Return all valid torchvision model names."""
+    from torchvision.models import list_models
+    return jsonify({"architectures": sorted(list_models())})
+
+
+@app.post("/models/validate-arch")
+def validate_arch():
+    """Check whether an architecture name is a valid torchvision model."""
+    payload = request.get_json(silent=True) or {}
+    arch = payload.get("architecture", "").strip()
+    if not arch:
+        return jsonify({"valid": False, "error": "Architecture name required"}), 400
+    try:
+        from torchvision.models import get_model
+        get_model(arch, weights=None)
+        return jsonify({"valid": True})
+    except Exception:
+        return jsonify({"valid": False, "error": f"Unknown architecture: '{arch}'"}), 400
+
+
 @app.post("/models/upload")
 def upload_model():
     """Accept a model file upload and register it in the registry."""
@@ -48,13 +70,61 @@ def upload_model():
              f"{sorted(ALLOWED_TASK_TYPES)}"}
         ), 400
 
+    image_config = None
+    if task_type == "image":
+        architecture = request.form.get("architecture", "").strip()
+        if not architecture:
+            return jsonify({"error": "Field 'architecture' is required for image models"}), 400
+        is_mtl = request.form.get("is_mtl", "false").lower() == "true"
+        image_config = {"architecture": architecture, "is_mtl": is_mtl}
+
     filename = secure_filename(model_file.filename)
     destination = Path("/app/models") / filename
     model_file.save(destination)
 
+    if image_config:
+        try:
+            # Auto-detect produce type count before full load
+            if image_config["is_mtl"]:
+                suffix = destination.suffix.lower()
+                if suffix == ".safetensors":
+                    from safetensors import safe_open
+                    with safe_open(str(destination), framework="pt", device="cpu") as f:
+                        num_produce_types = f.get_slice("type_head.1.weight").get_shape()[0]
+                else:
+                    import torch
+                    sd = torch.load(str(destination), map_location="cpu", weights_only=True)
+                    num_produce_types = sd["type_head.1.weight"].shape[0]
+                image_config["num_produce_types"] = int(num_produce_types)
+                print(f"[upload] Auto-detected num_produce_types={num_produce_types}", flush=True)
+        except KeyError:
+            destination.unlink(missing_ok=True)
+            return jsonify({"error": "Not a valid MTL model — 'type_head' not found in weights. "
+                            "Uncheck Multi-task if this is an STL model."}), 400
+        except Exception as exc:
+            destination.unlink(missing_ok=True)
+            return jsonify({"error": f"Could not read weights: {exc}"}), 400
+
+        try:
+            # Full load validates architecture + weight shape compatibility
+            from image_pipeline import load_model
+            loaded = load_model(use_file=True, path=str(destination), config=image_config)
+            if loaded is None:
+                raise ValueError("Model could not be loaded")
+            print(f"[upload] Model load validation passed for '{filename}'", flush=True)
+        except RuntimeError:
+            destination.unlink(missing_ok=True)
+            arch = image_config["architecture"]
+            return jsonify({"error": f"Weight mismatch: the saved weights are incompatible with '{arch}'. "
+                            f"Make sure the architecture matches what the model was trained with."}), 400
+        except Exception as exc:
+            destination.unlink(missing_ok=True)
+            return jsonify({"error": f"Model validation failed: {exc}"}), 400
+
     try:
         metadata = registry.register_model(
-            filename=filename, task_type=task_type, display_name=display_name)
+            filename=filename, task_type=task_type, display_name=display_name,
+            image_config=image_config)
     except ValueError as exc:
         destination.unlink(missing_ok=True)
         return jsonify({"error": str(exc)}), 400

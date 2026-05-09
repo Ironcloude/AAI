@@ -49,6 +49,23 @@ def models():
     return _relay(response)
 
 
+@app.get("/models/architectures")
+def list_architectures():
+    """Proxy architecture list to the AI service."""
+    response = requests.get(f"{AI_SERVICE_URL}/models/architectures", timeout=TIMEOUT)
+    return _relay(response)
+
+
+@app.post("/models/validate-arch")
+def validate_arch():
+    """Proxy architecture validation to the AI service."""
+    payload = request.get_json(silent=True) or {}
+    response = requests.post(
+        f"{AI_SERVICE_URL}/models/validate-arch", json=payload, timeout=TIMEOUT
+    )
+    return _relay(response)
+
+
 @app.post("/models/upload")
 def upload_model():
     """Proxy model upload to the AI service."""
@@ -67,6 +84,10 @@ def upload_model():
         "task_type": request.form.get("task_type", "tabular"),
         "display_name": request.form.get("display_name", model_file.filename),
     }
+    for field in ("architecture", "is_mtl"):
+        val = request.form.get(field)
+        if val is not None:
+            data[field] = val
     response = requests.post(
         f"{AI_SERVICE_URL}/models/upload",
         files=files, data=data, timeout=TIMEOUT
