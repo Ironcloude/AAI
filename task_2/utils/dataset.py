@@ -47,7 +47,7 @@ class ProduceDataset(Dataset):
                 continue
 
             # Parse "<type>__<health>"  type="apple", health=0
-            health_label = 0 if "healthy" in folder_name.lower() else 1
+            health_label = 0 if "healthy" in folder_name.lower() else 1 if "rotten" in folder_name.lower() else "NO LABEL"
             fruit_type = folder_name.split("__")[0].strip().lower()
 
             # Store produce type and corresponding index
