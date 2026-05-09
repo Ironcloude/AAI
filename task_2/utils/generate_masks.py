@@ -5,11 +5,9 @@ from pathlib import Path
 import numpy as np
 import cv2
 import torch
-from sam2.build_sam import build_sam2_hf
-from sam2.sam2_image_predictor import SAM2ImagePredictor
 from rembg import new_session, remove
 
-def _segment_sam2(image: np.ndarray, sam2_predictor: SAM2ImagePredictor
+def _segment_sam2(image: np.ndarray, sam2_predictor: "SAM2ImagePredictor"
                   ) -> np.ndarray:
     """Segment produce using SAM 2 with an inner-80% box prompt.
 
@@ -111,6 +109,8 @@ def generate_produce_mask(data_path: str | Path | None = None,
 
     # Load segmentation method
     if method == "sam2":
+        from sam2.build_sam import build_sam2_hf
+        from sam2.sam2_image_predictor import SAM2ImagePredictor
         # Use HF implementation for convenience
         # https://github.com/facebookresearch/sam2/blob/main/sam2/build_sam.py
         print(f"Loading SAM 2 ({sam_model_size}) on {device}...")
@@ -181,7 +181,7 @@ def generate_produce_mask(data_path: str | Path | None = None,
 
 def visualize_segmentation(image_path: str | Path,
                            method: str = "sam2",
-                           sam_predictor: SAM2ImagePredictor | None = None,
+                           sam_predictor: "SAM2ImagePredictor | None" = None,
                            sam_model_size: str = "small",
                            device: str = "cuda",
                            save_path: str | Path | None = None) -> tuple:
@@ -211,6 +211,8 @@ def visualize_segmentation(image_path: str | Path,
         raise FileNotFoundError(f"Could not read {image_path}")
 
     if method == "sam2":
+        from sam2.build_sam import build_sam2_hf
+        from sam2.sam2_image_predictor import SAM2ImagePredictor
         if sam_predictor is None:
             print(f"Loading SAM 2 ({sam_model_size}) on {device}...")
             model_id = f"facebook/sam2.1-hiera-{sam_model_size}"

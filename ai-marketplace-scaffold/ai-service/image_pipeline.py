@@ -35,6 +35,10 @@ _GRADE_THRESHOLDS = [
     ("B", {"colour": 75, "size": 80, "ripeness": 70}),
     ("C", {"colour": 65, "size": 70, "ripeness": 60}),
 ]
+_COMPOSITE_THRESHOLDS = [
+    (grade, sum(criteria.values()) / len(criteria))
+    for grade, criteria in _GRADE_THRESHOLDS
+]
 
 # Cached colour references - loaded once on first inference call
 _colour_refs: Optional[dict] = None
@@ -184,41 +188,37 @@ def analyse_image(image_bytes: bytes, model: Optional[Any] = None) -> Dict:
     try:
         clf = _classify(image_pil, model)
         label = clf["health_label"]
-        fruit_type = clf["fruit_type"]
+        fruit_type = clf["fruit_type"] or "unknown"
 
         ripeness = clf["health_confidence"] if label == "Healthy" else 100 - clf["health_confidence"]
         mask = generate_produce_mask(str(tmp_path), method="rembg")
 
         if colour_dist is not None:
-            generic_score, vibrancy, uniformity = grade_colour_generic(tmp_path, colour_dist, mask=mask)
+            generic_score, vibrancy = grade_colour_generic(tmp_path, colour_dist, mask=mask)
         else:
-            generic_score, vibrancy, uniformity = 50.0, 0.0, 0.0
+            generic_score, vibrancy = 50.0, 0.0
 
-        # fruit_type is a numeric class index string — histogram refs require the
-        # produce name (e.g. "apple_healthy"). Always use generic scoring until a
-        # class index→name mapping is available in the service.
         colour_score = generic_score
-
         size_score = grade_proportion(tmp_path, mask=mask)
     finally:
         tmp_path.unlink(missing_ok=True)
 
-    scores = {"colour": colour_score, "size": size_score, "ripeness": ripeness}
+    composite_score = (ripeness + colour_score + size_score) / 3
 
     if label == "Rotten":
         overall_grade = "Rejected"
     else:
         overall_grade = "D"
-        for grade, mins in _GRADE_THRESHOLDS:
-            if all(scores[k] >= mins[k] for k in mins):
+        for grade, avg_threshold in _COMPOSITE_THRESHOLDS:
+            if composite_score >= avg_threshold:
                 overall_grade = grade
                 break
 
-    colour_detail = f"vibrancy: {vibrancy:.2f}, uniformity: {uniformity:.2f}"
+    colour_detail = f"vibrancy: {vibrancy:.2f}"
 
     return {
         "prediction": label,
-        "fruit_type": fruit_type or "unknown",
+        "fruit_type": fruit_type,
         "overall_grade": overall_grade,
         "metrics": {
             "ripeness": round(ripeness, 2),
@@ -228,6 +228,7 @@ def analyse_image(image_bytes: bytes, model: Optional[Any] = None) -> Dict:
         "explanation": {
             "method": "mtl" if getattr(model, "_is_mtl", False) else "stl",
             "health_confidence": round(clf["health_confidence"], 2),
+            "composite_score": round(composite_score, 2),
             "colour_detail": colour_detail,
         },
     }
