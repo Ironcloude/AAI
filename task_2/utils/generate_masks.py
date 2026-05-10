@@ -5,9 +5,11 @@ from pathlib import Path
 import numpy as np
 import cv2
 import torch
+from sam2.build_sam import build_sam2_hf
+from sam2.sam2_image_predictor import SAM2ImagePredictor
 from rembg import new_session, remove
 
-def _segment_sam2(image: np.ndarray, sam2_predictor: "SAM2ImagePredictor"
+def _segment_sam2(image: np.ndarray, sam2_predictor: SAM2ImagePredictor
                   ) -> np.ndarray:
     """Segment produce using SAM 2 with an inner-80% box prompt.
 
