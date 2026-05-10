@@ -22,11 +22,11 @@ DATASETS = {
     "clean" : "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug", # deduplicated, no augmentation
 }
 
-SEEDS = [43]  # For multiple runs per config to get variance estimates
+SEEDS = [43,44,45]  # For multiple runs per config to get variance estimates
 
 EXPERIMENTS = [
     # experiments.EX1_EFFICIENTNET_FINETUNE,
-    # experiments.EX2_SWIN_FINETUNE,
+    experiments.EX2_SWIN_FINETUNE,
     # experiments.EX3_MAXVIT_FINETUNE,
     # experiments.EX1T_EFFICIENTNET_FINETUNE,
     # experiments.EX2T_SWIN_FINETUNE,
@@ -42,7 +42,7 @@ EXPERIMENTS = [
     # experiments.EX7a_SWIN_MTL_FREEZE,
     # experiments.EX7b_SWIN_MTL_SCRATCH,
     # experiments.EX7c_SWIN_MTL_UNWEIGHTED,
-    experiments.EX8_SWIN_FINETUNE_MTL_AUG
+    # experiments.EX8_SWIN_FINETUNE_MTL_AUG
 ]
 
 def ensure_parameters_tag(notebook_path: Path) -> None:

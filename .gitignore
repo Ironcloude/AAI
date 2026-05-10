@@ -232,7 +232,7 @@ task_2/data/dirty_hashes.pkl
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical.zip
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug
 task_2/data/Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug.zip
-golden_dataset/
+golden_dataset*/
 Grape/
 task_2/data/sam2_large_masks
 task_2/runs/*
@@ -247,3 +247,7 @@ task_2/data/golden_dataset.zip
 task_2/figures
 task_2/data/rembg_masks.zip
 task_2/data/fruit-and-vegetable-disease-healthy-vs-rotten.zip
+*:Zone.Identifier*
+task_2/models.zip
+groceries_dataset.csv
+ai-marketplace-scaffold/models/EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors
