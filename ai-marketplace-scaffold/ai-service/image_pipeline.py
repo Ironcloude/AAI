@@ -18,7 +18,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
-from safetensors.torch import load_file
+# from safetensors.torch import load_file
 from torchvision.models import get_model
 from utils.inference import InferenceContext, grade_produce
 from utils.xai_wrapper import TaskWrapper, swin_reshape_transform
@@ -99,6 +99,7 @@ def load_model(use_file: bool = True, path: Optional[str] = None,
 
     suffix = model_path.suffix.lower()
     if suffix == ".safetensors":
+        from safetensors.torch import load_file
         state_dict = load_file(str(model_path))
     else:
         state_dict = torch.load(str(model_path), map_location=DEVICE, weights_only=True)
@@ -143,6 +144,7 @@ def _grad_cam_config(backbone) -> tuple[list, Any]:
 
 def _try_grad_cam(model: Any, input_tensor: Any, clf: dict,
                   original_image: Optional[Image.Image] = None) -> Optional[str]:
+    return None
     try:
         if not getattr(model, "_is_mtl", False) or not hasattr(model, "backbone"):
             return None
