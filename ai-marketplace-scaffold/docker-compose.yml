@@ -15,7 +15,9 @@ services:
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./models:/app/models
+      - ../task_2:/aai_service
     healthcheck:
+
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
       interval: 15s
       timeout: 5s

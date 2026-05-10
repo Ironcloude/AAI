@@ -1,11 +1,17 @@
+import sys
+import os
+
+# Add task_2 directory to sys.path to resolve 'utils' module
+sys.path.append("/aai_service")
+
 from pathlib import Path
 
 from flask import Flask, jsonify, request
 from werkzeug.utils import secure_filename
 
-from image_pipeline import analyse_image
+# from image_pipeline import analyse_image
 from model_registry import build_registry_from_env
-from utils.generate_masks import warmup_rembg
+# from utils.generate_masks import warmup_rembg
 
 
 app = Flask(__name__)
@@ -17,6 +23,7 @@ ALLOWED_TASK_TYPES = {"tabular", "image"}
 def _startup_warmup():
     """Pre-initialise heavy resources so the first user request isn't cold."""
     try:
+        from utils.generate_masks import warmup_rembg
         warmup_rembg()
     except Exception as exc:
         print(f"[startup] rembg warmup failed (non-critical): {exc}", flush=True)
@@ -33,7 +40,7 @@ def _startup_warmup():
             print(f"[startup] model pre-load failed: {exc}", flush=True)
 
 
-_startup_warmup()
+# _startup_warmup()
 
 
 @app.get("/health")
@@ -196,6 +203,7 @@ def predict_tabular():
 @app.post("/predict/image")
 def predict_image():
     """Run image prediction using the active image model or heuristics."""
+    from image_pipeline import analyse_image
     image_file = request.files.get("image")
     if not image_file or not image_file.filename:
         return jsonify(
