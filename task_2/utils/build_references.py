@@ -361,8 +361,8 @@ def plot_healthy_vs_rotten_references(healthy_ref_path: str | Path,
     """Compare per-type healthy vs rotten HSV references side by side.
 
     For each produce type present in both reference pickles, renders a row
-    with: healthy median swatch, healthy HSV histogram, rotten median swatch,
-    rotten HSV histogram. Types missing from either side are skipped.
+    with mean and median swatches and HSV histograms for healthy and rotten
+    (eight columns total). Types missing from either side are skipped.
 
     Args:
         healthy_ref_path: Path to healthy references pickle.
@@ -393,40 +393,77 @@ def plot_healthy_vs_rotten_references(healthy_ref_path: str | Path,
                             cv2.COLOR_HSV2RGB)[0][0] / 255.0, hue, sat
 
     n = len(shared)
-    fig, axes = plt.subplots(n, 4, figsize=(14, 2.8 * n), squeeze=False)
-    fig.suptitle("Healthy vs Rotten Colour References (per fruit type)",
+    # 8 columns per row:
+    # 0: H mean swatch | 1: H median swatch | 2: H mean hist | 3: H median hist
+    # 4: R mean swatch | 5: R median swatch | 6: R mean hist | 7: R median hist
+    fig, axes = plt.subplots(n, 8, figsize=(22, 2.6 * n), squeeze=False)
+    fig.suptitle("Healthy vs Rotten Colour References — mean and median (per fruit type)",
                  fontsize=15)
 
     for row, fruit_type in enumerate(shared):
-        h_med = healthy_refs[fruit_type]["median"]
-        r_med = rotten_refs[fruit_type]["median"]
+        h_mean = healthy_refs[fruit_type]["mean"]
+        h_med  = healthy_refs[fruit_type]["median"]
+        r_mean = rotten_refs[fruit_type]["mean"]
+        r_med  = rotten_refs[fruit_type]["median"]
 
-        h_rgb, h_h, h_s = dominant_rgb(h_med)
-        r_rgb, r_h, r_s = dominant_rgb(r_med)
+        h_mean_rgb, h_mean_h, h_mean_s = dominant_rgb(h_mean)
+        h_med_rgb,  h_med_h,  h_med_s  = dominant_rgb(h_med)
+        r_mean_rgb, r_mean_h, r_mean_s = dominant_rgb(r_mean)
+        r_med_rgb,  r_med_h,  r_med_s  = dominant_rgb(r_med)
 
-        axes[row, 0].imshow([[h_rgb]])
-        axes[row, 0].set_title(f"Healthy swatch\nH={h_h}  S={h_s}", fontsize=10)
+        # 0: Healthy mean swatch (carries the row label on the left)
+        axes[row, 0].imshow([[h_mean_rgb]])
+        axes[row, 0].set_title(f"H mean\nH={h_mean_h}  S={h_mean_s}", fontsize=9)
         axes[row, 0].set_ylabel(fruit_type, fontsize=11, fontweight="bold",
                                  rotation=0, labelpad=45, va="center")
         axes[row, 0].set_xticks([]); axes[row, 0].set_yticks([])
 
-        axes[row, 1].imshow(h_med.T, origin="lower", aspect="auto",
+        # 1: Healthy median swatch
+        axes[row, 1].imshow([[h_med_rgb]])
+        axes[row, 1].set_title(f"H median\nH={h_med_h}  S={h_med_s}", fontsize=9)
+        axes[row, 1].axis("off")
+
+        # 2: Healthy mean histogram
+        axes[row, 2].imshow(h_mean.T, origin="lower", aspect="auto",
                             extent=[0, 180, 0, 256], cmap="hot")
-        axes[row, 1].set_title("Healthy HSV hist", fontsize=10)
-        axes[row, 1].set_ylabel("Sat")
+        axes[row, 2].set_title("H mean hist", fontsize=9)
+        axes[row, 2].set_ylabel("Sat")
         if row == n - 1:
-            axes[row, 1].set_xlabel("Hue")
+            axes[row, 2].set_xlabel("Hue")
 
-        axes[row, 2].imshow([[r_rgb]])
-        axes[row, 2].set_title(f"Rotten swatch\nH={r_h}  S={r_s}", fontsize=10)
-        axes[row, 2].axis("off")
-
-        axes[row, 3].imshow(r_med.T, origin="lower", aspect="auto",
+        # 3: Healthy median histogram
+        axes[row, 3].imshow(h_med.T, origin="lower", aspect="auto",
                             extent=[0, 180, 0, 256], cmap="hot")
-        axes[row, 3].set_title("Rotten HSV hist", fontsize=10)
-        axes[row, 3].set_ylabel("Sat")
+        axes[row, 3].set_title("H median hist", fontsize=9)
+        axes[row, 3].set_yticks([])
         if row == n - 1:
             axes[row, 3].set_xlabel("Hue")
+
+        # 4: Rotten mean swatch
+        axes[row, 4].imshow([[r_mean_rgb]])
+        axes[row, 4].set_title(f"R mean\nH={r_mean_h}  S={r_mean_s}", fontsize=9)
+        axes[row, 4].axis("off")
+
+        # 5: Rotten median swatch
+        axes[row, 5].imshow([[r_med_rgb]])
+        axes[row, 5].set_title(f"R median\nH={r_med_h}  S={r_med_s}", fontsize=9)
+        axes[row, 5].axis("off")
+
+        # 6: Rotten mean histogram
+        axes[row, 6].imshow(r_mean.T, origin="lower", aspect="auto",
+                            extent=[0, 180, 0, 256], cmap="hot")
+        axes[row, 6].set_title("R mean hist", fontsize=9)
+        axes[row, 6].set_ylabel("Sat")
+        if row == n - 1:
+            axes[row, 6].set_xlabel("Hue")
+
+        # 7: Rotten median histogram
+        axes[row, 7].imshow(r_med.T, origin="lower", aspect="auto",
+                            extent=[0, 180, 0, 256], cmap="hot")
+        axes[row, 7].set_title("R median hist", fontsize=9)
+        axes[row, 7].set_yticks([])
+        if row == n - 1:
+            axes[row, 7].set_xlabel("Hue")
 
     # Report any types missing from one side — interesting to note in writeup
     only_healthy = sorted(set(healthy_refs.keys()) - set(rotten_refs.keys()))
@@ -470,20 +507,19 @@ if __name__ == "__main__":
                                 save_paths=[str(healthy_ref_path), str(dist_path)], rotten=False)
         plot_colour_references(str(healthy_ref_path), str(dist_path))
 
-    TESTS
-    import cv2
-    from pathlib import Path
-    import random
+    # import cv2
+    # from pathlib import Path
+    # import random
 
-    rotten_dir = Path(".") / "data" / "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug" / "Cucumber__Rotten"
-    samples = random.sample(list(rotten_dir.iterdir()), 10)
+    # rotten_dir = Path(".") / "data" / "Fruit_And_Vegetable_Diseases_Dataset_no_identical_no_aug" / "Cucumber__Rotten"
+    # samples = random.sample(list(rotten_dir.iterdir()), 10)
 
-    import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(2, 5, figsize=(15, 6))
-    for ax, p in zip(axes.flat, samples):
-        img = cv2.imread(str(p))
-        ax.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        ax.set_title(p.name[:20], fontsize=7)
-        ax.axis("off")
-    plt.tight_layout()
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # fig, axes = plt.subplots(2, 5, figsize=(15, 6))
+    # for ax, p in zip(axes.flat, samples):
+    #     img = cv2.imread(str(p))
+    #     ax.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    #     ax.set_title(p.name[:20], fontsize=7)
+    #     ax.axis("off")
+    # plt.tight_layout()
+    # plt.show()
