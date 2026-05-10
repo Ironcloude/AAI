@@ -1,9 +1,13 @@
 """Colour and proportion grading functions for produce quality assessment."""
 
+import base64
+import io
 import sys
 from pathlib import Path
 import cv2
-from matplotlib.pyplot import hsv
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 sys.path.append(".")
 try:
@@ -12,7 +16,44 @@ except ModuleNotFoundError:
     from generate_masks import generate_produce_mask
 import pickle
 from pathlib import Path
-    
+
+
+def heatmap_b64(img_hist: np.ndarray, h_ref: np.ndarray, r_ref: np.ndarray,
+                title: str = "", d_h: float | None = None, d_r: float | None = None) -> str:
+    """3-panel Hue×Saturation heatmap: image | healthy ref | rotten ref, as base64 PNG.
+
+    Args:
+        img_hist: HSV histogram for the query image.
+        h_ref: HSV histogram for the healthy reference.
+        r_ref: HSV histogram for the rotten reference.
+        title: Optional suptitle (produce type).
+        d_h: Bhattacharyya distance to healthy ref (annotated on panel if provided).
+        d_r: Bhattacharyya distance to rotten ref (annotated on panel if provided).
+    """
+    panels = [
+        (img_hist, "Input image",             "Blues",  None),
+        (h_ref,    "Avg. healthy reference",  "Greens", d_h),
+        (r_ref,    "Avg. rotten reference",   "Reds",   d_r),
+    ]
+    fig, axes = plt.subplots(1, 3, figsize=(6.8, 2.4), dpi=95)
+    for ax, (h, label, cmap, dist) in zip(axes, panels):
+        ax.imshow(h.T, origin="lower", aspect="auto", cmap=cmap,
+                  extent=[0, 180, 0, 256], interpolation="bilinear")
+        subtitle = f"\nd = {dist:.3f}" if dist is not None else ""
+        ax.set_title(f"{label}{subtitle}", fontsize=7.5, pad=3)
+        ax.set_xlabel("Hue (°)", fontsize=6.5)
+        ax.set_ylabel("Sat", fontsize=6.5)
+        ax.tick_params(labelsize=5.5)
+    if title:
+        fig.suptitle(title.capitalize(), fontsize=8, y=1.02)
+    fig.tight_layout(pad=0.4)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return base64.b64encode(buf.getvalue()).decode()
+
+
 def grade_colour_dual(image_path, fruit_type,
                      healthy_refs, rotten_refs,
                      mask=None, verbose=True, gamma=0 ) -> float | None:
@@ -99,7 +140,18 @@ def grade_colour_dual(image_path, fruit_type,
     if verbose:
         print("="*50 + "\n")    
     summary_str = "\n".join(summary_lines)
-    return round(score, 1), summary_str
+    histogram_b64 = heatmap_b64(hist, h_ref, r_ref, title=fruit_key,
+                                d_h=distance_healthy, d_r=distance_rotten)
+
+    details = {
+        "d_H": round(distance_healthy, 4),
+        "d_R": round(distance_rotten, 4),
+        "gamma": gamma,
+        "w_H": round(float(weight_healthy), 4) if gamma else None,
+        "w_R": round(float(weight_rotten), 4) if gamma else None,
+        "histogram_b64": histogram_b64,
+    }
+    return round(score, 1), summary_str, details
 
 
 def compute_colour_components(fruit_pixels: np.ndarray
@@ -367,7 +419,7 @@ def visualize_bhattacharyya_score(
 
 
 def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None
-                     ) -> float:
+                     ) -> tuple[float, str | None, int, int]:
     """Score produce shape using contour solidity.
 
     Solidity (contour area / convex hull area) captures how plump and
@@ -378,7 +430,8 @@ def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None
         mask: Optional binary mask (0/1).
 
     Returns:
-        Proportion score in [0, 100].
+        Tuple of (proportion_score in [0, 100], contour overlay as base64 JPEG or None,
+        contour_area in px², hull_area in px²).
     """
     if mask is None:
         mask = generate_produce_mask(str(image_path))
@@ -387,22 +440,38 @@ def grade_proportion(image_path: str | Path, mask: np.ndarray | None = None
         mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
     if not contours:
-        return 0.0
+        return 0.0, None, 0, 0
 
     # Get larger contour (perimeter)
     largest = max(contours, key=cv2.contourArea)
 
     # Solidity: how does contour fit to convex hull? I.e., plump and full.
-    # Convex hull - Perimeter as defined by outermost peaks 
+    # Convex hull - Perimeter as defined by outermost peaks
     # Contour     - Actual object perimeter
-    convex_hull = cv2.convexHull(largest) 
-    contour_area = cv2.contourArea(largest)  
-    hull_area = cv2.contourArea(convex_hull)  
-    solidity = (contour_area / hull_area) if hull_area > 0 else 0
+    convex_hull  = cv2.convexHull(largest)
+    contour_area = cv2.contourArea(largest)
+    hull_area    = cv2.contourArea(convex_hull)
+    solidity     = (contour_area / hull_area) if hull_area > 0 else 0
 
     # Weighted combination
     proportion_score = solidity * 100
-    return round(proportion_score, 1)
+
+    # Draw contour (red) and convex hull (blue) on the original image for visualisation
+    overlay_b64 = None
+    img = cv2.imread(str(image_path))
+    if img is not None:
+        img_h, img_w = img.shape[:2]
+        mask_h, mask_w = mask.shape[:2]
+        sx, sy = img_w / max(mask_w, 1), img_h / max(mask_h, 1)
+        def _scale(pts):
+            return (pts.astype(np.float32) * [sx, sy]).astype(np.int32)
+        overlay = img.copy()
+        cv2.drawContours(overlay, [_scale(convex_hull)], -1, (246, 130, 59), 2)  # blue hull (BGR)
+        cv2.drawContours(overlay, [_scale(largest)],     -1, (0,   0,  220), 2)  # red contour (BGR)
+        _, buf = cv2.imencode(".jpg", overlay, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        overlay_b64 = base64.b64encode(buf.tobytes()).decode()
+
+    return round(proportion_score, 1), overlay_b64, int(contour_area), int(hull_area)
 
 if __name__ == "__main__":
 

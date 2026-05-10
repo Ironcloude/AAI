@@ -5,12 +5,35 @@ from werkzeug.utils import secure_filename
 
 from image_pipeline import analyse_image
 from model_registry import build_registry_from_env
+from utils.generate_masks import warmup_rembg
 
 
 app = Flask(__name__)
 registry = build_registry_from_env()
 MODELS_DIR = Path(app.config.get("MODELS_DIR", "/app/models"))
 ALLOWED_TASK_TYPES = {"tabular", "image"}
+
+
+def _startup_warmup():
+    """Pre-initialise heavy resources so the first user request isn't cold."""
+    try:
+        warmup_rembg()
+    except Exception as exc:
+        print(f"[startup] rembg warmup failed (non-critical): {exc}", flush=True)
+    try:
+        from image_pipeline import _load_colour_refs
+        _load_colour_refs()
+    except Exception as exc:
+        print(f"[startup] colour refs warmup failed: {exc}", flush=True)
+    if registry.active_model_name:
+        try:
+            registry.load_model(registry.active_model_name)
+            print(f"[startup] pre-loaded model '{registry.active_model_name}'", flush=True)
+        except Exception as exc:
+            print(f"[startup] model pre-load failed: {exc}", flush=True)
+
+
+_startup_warmup()
 
 
 @app.get("/health")
@@ -196,6 +219,10 @@ def predict_image():
                 )
 
         result = analyse_image(image_bytes, model=model)
+        if registry.active_model_name:
+            state = registry._read_registry()
+            meta = state.get("models", {}).get(registry.active_model_name, {})
+            result["model_display_name"] = meta.get("display_name", registry.active_model_name)
     except Exception as exc:
         return jsonify({"error": f"Image analysis failed: {exc}"}), 400
 

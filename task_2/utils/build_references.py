@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 sys.path.append(".")
 from generate_masks import generate_produce_mask
-from grade_produce import compute_colour_components
+from grade_produce import compute_colour_components, heatmap_b64
 
 
 

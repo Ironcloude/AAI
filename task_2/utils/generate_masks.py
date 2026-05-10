@@ -5,11 +5,26 @@ from pathlib import Path
 import numpy as np
 import cv2
 import torch
-from sam2.build_sam import build_sam2_hf
-from sam2.sam2_image_predictor import SAM2ImagePredictor
 from rembg import new_session, remove
 
-def _segment_sam2(image: np.ndarray, sam2_predictor: SAM2ImagePredictor
+# Cached rembg session — creating a new session loads U2Net (~176 MB) into ONNX
+# Runtime, which takes 1-2 s. Reusing the session eliminates this cost after warmup.
+_rembg_session = None
+
+
+def _get_rembg_session():
+    global _rembg_session
+    if _rembg_session is None:
+        _rembg_session = new_session("u2net")
+        print("[generate_masks] rembg U2Net session initialised", flush=True)
+    return _rembg_session
+
+
+def warmup_rembg():
+    """Pre-initialise the rembg session at container startup."""
+    _get_rembg_session()
+
+def _segment_sam2(image: np.ndarray, sam2_predictor
                   ) -> np.ndarray:
     """Segment produce using SAM 2 with an inner-80% box prompt.
 
@@ -127,7 +142,7 @@ def generate_produce_mask(data_path: str | Path | None = None,
         if method == "sam2":
             return _segment_sam2(image, sam_predictor)
         elif method == "rembg":
-            return _segment_rembg(image)
+            return _segment_rembg(image, session=_get_rembg_session())
         else:
             return _segment_grabcut(image)
         

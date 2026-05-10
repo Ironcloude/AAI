@@ -12,4 +12,5 @@ rembg==2.0.57
 torch==2.3.1+cpu
 torchvision==0.18.1+cpu
 
+grad-cam==1.5.4
 watchdog==4.0.1
