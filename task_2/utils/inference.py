@@ -34,7 +34,7 @@ def classify_produce(image_path, ctx: InferenceContext):
     image = Image.open(image_path).convert("RGBA").convert("RGB")
     input_tensor = ctx.auto_transforms(image).unsqueeze(0).to(ctx.device)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         if ctx.is_mtl:
             health_output, type_output = ctx.model(input_tensor)
         else:
@@ -45,7 +45,6 @@ def classify_produce(image_path, ctx: InferenceContext):
         health_confidence = health_probs[health_pred_id].item() * 100
 
     health_label = ctx.health_names[health_pred_id]
-    print(f"Health: {health_label} ({health_confidence:.1f}%)")
 
     result = {
         "health_label": health_label,
@@ -102,18 +101,24 @@ def grade_produce(image_path, ctx: InferenceContext, healthy_colour_refs=None,
     )
 
     generic_score, vibrancy = grade_colour_generic(image_path, colour_distribution, mask=mask)
+    colour_details = None
+    summary_str = ""
+    raw_dual_score = None
     if classification.get("known_type") and rotten_colour_references and grade_colour_vs_ref:
-        dual_score, summary_str = grade_colour_dual(image_path, fruit_type,
-                                                    healthy_colour_refs, rotten_colour_references,
-                                                    mask=mask, gamma=softmax_g)
-        colour_score = max(dual_score, generic_score)
+        dual_result = grade_colour_dual(image_path, fruit_type,
+                                        healthy_colour_refs, rotten_colour_references,
+                                        mask=mask, gamma=softmax_g, verbose=False)
+        if dual_result is not None:
+            raw_dual_score, summary_str, colour_details = dual_result
+            colour_score = max(raw_dual_score, generic_score)
+        else:
+            colour_score = generic_score
     elif classification.get("known_type") and healthy_colour_refs and grade_colour_vs_ref:
         colour_score, summary_str = grade_colour(image_path, fruit_type,
                                                  healthy_colour_refs, mask=mask), ""
     else:
-        colour_score, summary_str = generic_score, ""
-    print(summary_str)
-    proportion_score = grade_proportion(image_path, mask=mask)
+        colour_score = generic_score
+    proportion_score, proportion_overlay, contour_area, hull_area = grade_proportion(image_path, mask=mask)
 
     scores = {
         "ripeness": ripeness_score,
@@ -212,8 +217,16 @@ def grade_produce(image_path, ctx: InferenceContext, healthy_colour_refs=None,
         "fruit_type": fruit_type,
         "ripeness_score": ripeness_score,
         "color_score": colour_score,
+        "raw_dual_score": raw_dual_score,
         "generic_colour_score": generic_score,
         "proportion_score": proportion_score,
+        "proportion_overlay": proportion_overlay,
+        "proportion_details": {"contour_area": contour_area, "hull_area": hull_area},
         "overall_grade": grade,
+        "composite_score": composite_score,
+        "colour_details": colour_details,
+        "generic_colour_score": generic_score,
         "explanation": explanation,
+        "classification": classification,
+        "mask": mask,
     }

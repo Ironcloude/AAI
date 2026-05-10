@@ -4,9 +4,6 @@ import sys
 import torch
 import torch.nn as nn
 from torchvision.models import get_model, get_weight
-sys.path.append("..")
-sys.path.append(".")
-from experiment_configs import task_2_config as experiments
 
 class MultiTaskClassifier(nn.Module):
     """Architecture-agnostic multi-task wrapper.

@@ -154,7 +154,11 @@ class ModelRegistry:
 
     def _ensure_active_model_loaded(self) -> None:
         if self.active_model_name:
-            self.load_model(self.active_model_name)
+            try:
+                self.load_model(self.active_model_name)
+            except FileNotFoundError:
+                print(f"[registry] Active model '{self.active_model_name}' not found on disk — clearing.", flush=True)
+                self.active_model_name = None
 
     def load_model(self, model_name: str):
         # Removed the _lock from here because select_model already holds it
