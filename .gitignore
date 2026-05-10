@@ -250,3 +250,4 @@ task_2/data/fruit-and-vegetable-disease-healthy-vs-rotten.zip
 *:Zone.Identifier*
 task_2/models.zip
 groceries_dataset.csv
+ai-marketplace-scaffold/models/EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors

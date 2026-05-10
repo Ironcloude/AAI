@@ -37,7 +37,7 @@
       "source": "upload"
     },
     "EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors": {
-      "display_name": "Swin MTL",
+      "display_name": "EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors",
       "task_type": "image",
       "format": ".safetensors",
       "path": "/app/models/EX6a_SWIN_FINETUNE_MTL_20260422201021.safetensors",
