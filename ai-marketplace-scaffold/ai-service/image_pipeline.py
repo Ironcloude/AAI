@@ -144,7 +144,6 @@ def _grad_cam_config(backbone) -> tuple[list, Any]:
 
 def _try_grad_cam(model: Any, input_tensor: Any, clf: dict,
                   original_image: Optional[Image.Image] = None) -> Optional[str]:
-    return None
     try:
         if not getattr(model, "_is_mtl", False) or not hasattr(model, "backbone"):
             return None

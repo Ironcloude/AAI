@@ -21,6 +21,8 @@ COPY . /app
 
 RUN mkdir -p /app/models
 
+RUN python -c "from rembg import new_session; new_session('u2net')"
+
 EXPOSE 8000
 
 CMD ["python", "app.py"]
